@@ -830,6 +830,32 @@ export class GitHubPullRequestApi extends Context.Service<
  * The host is not read off the identity: it travels alongside it, because the identity a
  * project records is the path below its host and never names the host itself.
  */
+/**
+ * Runs each operation naming a `repository` under that owner's credential, including the requests
+ * inside it that name no repository themselves.
+ */
+type RepositoryOperation = (
+  input: { readonly repository?: unknown },
+  ...rest: ReadonlyArray<unknown>
+) => Effect.Effect<unknown>;
+
+function withRepositoryOwnerCredentials<Service extends object>(service: Service): Service {
+  return Object.fromEntries(
+    Object.entries(service).map(([name, operation]: [string, RepositoryOperation]) => [
+      name,
+      (...[input, ...rest]: Parameters<RepositoryOperation>) => {
+        const owner =
+          typeof input?.repository === "string"
+            ? parseRepositorySelector(input.repository).owner
+            : "";
+        return owner === ""
+          ? operation(input, ...rest)
+          : operation(input, ...rest).pipe(Effect.provideService(GitHubApi.CredentialOwner, owner));
+      },
+    ]),
+  ) as Service;
+}
+
 function parseRepositorySelector(value: string): {
   readonly owner: string;
   readonly name: string;
@@ -1839,6 +1865,7 @@ export const make = Effect.gen(function* () {
         request.host.toLowerCase(),
         Context.getOrElse(context, GitHubApi.PinnedGitHubCredential, () => null)
           ?.credentialFingerprint ?? null,
+        Context.getOrElse(context, GitHubApi.CredentialOwner, () => null),
         Context.getOrElse(context, SourceControlRateLimit.CredentialScope, () => ""),
       ]),
     resolver: (entries) => {
@@ -1919,6 +1946,7 @@ export const make = Effect.gen(function* () {
         request.host.toLowerCase(),
         Context.getOrElse(context, GitHubApi.PinnedGitHubCredential, () => null)
           ?.credentialFingerprint ?? null,
+        Context.getOrElse(context, GitHubApi.CredentialOwner, () => null),
         Context.getOrElse(context, SourceControlRateLimit.CredentialScope, () => ""),
       ]),
     resolver: (entries) => {
@@ -1962,7 +1990,7 @@ export const make = Effect.gen(function* () {
   const getPullRequestWatchFingerprint: GitHubPullRequestApi["Service"]["getPullRequestWatchFingerprint"] =
     (input) => Effect.request(new PullRequestWatchFingerprintRead(input), watchFingerprintResolver);
 
-  return GitHubPullRequestApi.of({
+  const service = GitHubPullRequestApi.of({
     withVerifiedCredential,
     revalidateChecks,
     getRoutingIdentity,
@@ -3030,6 +3058,7 @@ export const make = Effect.gen(function* () {
         ),
       ),
   });
+  return withRepositoryOwnerCredentials(service);
 });
 
 export const layer = Layer.effect(GitHubPullRequestApi, make);

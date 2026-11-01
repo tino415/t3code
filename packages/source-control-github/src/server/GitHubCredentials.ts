@@ -93,9 +93,10 @@ export class GitHubCredentials extends Context.Service<
   {
     readonly get: (
       host: string,
+      owner?: string,
     ) => Effect.Effect<GitHubCredential, GitHubCredentialUnavailableError>;
     /** Drops the held token after GitHub refused it, so the next read asks its source again. */
-    readonly invalidate: (host: string) => Effect.Effect<void>;
+    readonly invalidate: (host: string, owner?: string) => Effect.Effect<void>;
   }
 >()("@t3tools/source-control-github/server/GitHubCredentials") {}
 
@@ -127,6 +128,33 @@ export function environmentToken(
     if (value) return value;
   }
   return null;
+}
+
+const OWNER_ACCOUNTS_VARIABLE = "T3CODE_GITHUB_OWNER_ACCOUNTS";
+const ANY_OWNER = "*";
+
+/** Parses `payout-one=martin-cernak,*=tino415`: the gh login to use per github.com repository owner. */
+export function ownerAccounts(
+  env: Readonly<Record<string, string | undefined>>,
+): ReadonlyMap<string, string> {
+  const pairs = (env[OWNER_ACCOUNTS_VARIABLE] ?? "").split(",").flatMap((entry) => {
+    const [owner, account] = entry.split("=").map((part) => part.trim());
+    return owner && account ? [[owner.toLowerCase(), account] as const] : [];
+  });
+  return new Map(pairs);
+}
+
+export function ownerHasOwnAccount(
+  env: Readonly<Record<string, string | undefined>>,
+  host: string,
+  owner: string | null,
+): boolean {
+  return (
+    host === "github.com" &&
+    owner !== null &&
+    owner !== ANY_OWNER &&
+    ownerAccounts(env).has(owner.toLowerCase())
+  );
 }
 
 /** @public Service construction is part of the canonical Effect module API. */
@@ -200,6 +228,20 @@ export const make = Effect.gen(function* () {
       Effect.orElseSucceed(() => null),
     );
 
+  const accountFor = (
+    host: string,
+    pinnedAccount: string | undefined,
+    owner: string | undefined,
+  ) => {
+    if (host !== "github.com") return pinnedAccount;
+    const accounts = ownerAccounts(environment);
+    return (
+      (owner === undefined ? undefined : accounts.get(owner.toLowerCase())) ??
+      pinnedAccount ??
+      accounts.get(ANY_OWNER)
+    );
+  };
+
   /** Cache key: the host plus its pinned account, so a changed pin misses the cache. */
   const cacheKey = (host: string, account: string | undefined) =>
     account === undefined ? host : `${host}\u0000${account}`;
@@ -240,7 +282,7 @@ export const make = Effect.gen(function* () {
   });
 
   return GitHubCredentials.of({
-    get: Effect.fn("GitHubCredentials.get")(function* (rawHost) {
+    get: Effect.fn("GitHubCredentials.get")(function* (rawHost, owner) {
       const host = normalizeHost(rawHost);
       const choice = yield* hostChoice(host);
       if (choice?.enabled === false) {
@@ -257,12 +299,14 @@ export const make = Effect.gen(function* () {
           fingerprint: yield* fingerprintOf(host, saved),
         } satisfies GitHubCredential;
       }
-      return yield* Cache.get(cache, cacheKey(host, choice?.account));
+      return yield* Cache.get(cache, cacheKey(host, accountFor(host, choice?.account, owner)));
     }),
-    invalidate: (rawHost) => {
+    invalidate: (rawHost, owner) => {
       const host = normalizeHost(rawHost);
       return hostChoice(host).pipe(
-        Effect.flatMap((choice) => Cache.invalidate(cache, cacheKey(host, choice?.account))),
+        Effect.flatMap((choice) =>
+          Cache.invalidate(cache, cacheKey(host, accountFor(host, choice?.account, owner))),
+        ),
       );
     },
   });

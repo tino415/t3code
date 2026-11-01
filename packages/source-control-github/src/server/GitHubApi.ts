@@ -12,6 +12,7 @@ import * as Semaphore from "effect/Semaphore";
 import { HttpClient, HttpClientRequest, type HttpClientResponse } from "effect/http";
 
 import { collectUint8StreamText } from "@t3tools/provider-core/server/collectStreamText";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as GitHubCredentials from "./GitHubCredentials.ts";
 import * as GitHubQuota from "./GitHubQuota.ts";
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
@@ -34,6 +35,15 @@ export const PinnedGitHubCredential = Context.Reference<{
 } | null>("@t3tools/source-control-github/server/GitHubApi/PinnedGitHubCredential", {
   defaultValue: () => null,
 });
+
+/**
+ * The repository owner the running operation acts for, so that requests naming no repository
+ * (a mutation by node id) still carry the token of the account that can see it.
+ */
+export const CredentialOwner = Context.Reference<string | null>(
+  "@t3tools/source-control-github/server/GitHubApi/CredentialOwner",
+  { defaultValue: () => null },
+);
 
 export class GitHubApiRequestError extends Schema.TaggedError<GitHubApiRequestError>()(
   "GitHubApiRequestError",
@@ -333,6 +343,11 @@ function classify(input: {
   return Answer.Failed({ messages: input.graphql ? undefined : restErrorMessages(body) });
 }
 
+function repositoryOwnerInPath(path: string): string | undefined {
+  const owner = /^\/*repos\/([^/?]+)\//u.exec(path)?.[1];
+  return owner === undefined ? undefined : decodeURIComponent(owner);
+}
+
 /** @public Service construction is part of the canonical Effect module API. */
 export const make = Effect.gen(function* () {
   const httpClient = yield* HttpClient.HttpClient;
@@ -341,24 +356,31 @@ export const make = Effect.gen(function* () {
   const limits = yield* SourceControlRateLimit.SourceControlRateLimit;
   const gate = yield* Semaphore.make(CONCURRENCY);
 
-  const credential: GitHubApi["Service"]["credential"] = Effect.fn("GitHubApi.credential")(
-    function* (host) {
-      const normalized = normalizeHost(host);
-      const pinned = yield* PinnedGitHubCredential;
-      if (pinned !== null) {
-        // A pinned page only ever talks to the host it verified.
-        if (pinned.host !== normalized) {
-          return yield* new GitHubApiAuthenticationError({
-            host: normalized,
-            operation: "credential",
-          });
-        }
-        return { token: pinned.token, fingerprint: pinned.credentialFingerprint };
+  const credentialFor = Effect.fn("GitHubApi.credentialFor")(function* (
+    host: string,
+    owner: string | null,
+  ) {
+    const normalized = normalizeHost(host);
+    const pinned = yield* PinnedGitHubCredential;
+    const environment = yield* HostProcess.Environment;
+    if (pinned !== null && !GitHubCredentials.ownerHasOwnAccount(environment, normalized, owner)) {
+      // A pinned page only ever talks to the host it verified.
+      if (pinned.host !== normalized) {
+        return yield* new GitHubApiAuthenticationError({
+          host: normalized,
+          operation: "credential",
+        });
       }
-      const held = yield* credentials.get(normalized);
-      return { token: held.token, fingerprint: held.fingerprint };
-    },
-  );
+      return { token: pinned.token, fingerprint: pinned.credentialFingerprint };
+    }
+    const held = yield* credentials.get(normalized, owner ?? undefined);
+    return { token: held.token, fingerprint: held.fingerprint };
+  });
+
+  const credential: GitHubApi["Service"]["credential"] = (host) =>
+    Effect.gen(function* () {
+      return yield* credentialFor(host, yield* CredentialOwner);
+    });
 
   /**
    * Sends one request under the host's rate-limit pause and fails a refusal with the error that
@@ -367,6 +389,8 @@ export const make = Effect.gen(function* () {
   const send = Effect.fn("GitHubApi.send")(function* (input: {
     readonly host: string;
     readonly operation: string;
+    /** The repository owner the request itself names, when it names one. */
+    readonly owner?: string | undefined;
     readonly request: HttpClientRequest.HttpClientRequest;
     readonly maxResponseBytes: number;
     readonly timeout?: Duration.Input | undefined;
@@ -384,7 +408,8 @@ export const make = Effect.gen(function* () {
       "http.request.method": input.request.method,
       "url.path": new URL(input.request.url).pathname,
     });
-    const { token, fingerprint } = yield* credential(host);
+    const owner = (yield* CredentialOwner) ?? input.owner ?? null;
+    const { token, fingerprint } = yield* credentialFor(host, owner);
     const scope = yield* SourceControlRateLimit.CredentialScope;
     // REST spends `core` and GraphQL its own quota, each with its own reserve. Every REST path
     // this reads today is `core`; a `search/` read would need its own resource here. A refusal
@@ -483,7 +508,7 @@ export const make = Effect.gen(function* () {
           // The source may hold a newer token than the one that was refused.
           Unauthorized: () =>
             credentials
-              .invalidate(host)
+              .invalidate(host, owner ?? undefined)
               .pipe(Effect.andThen(Effect.fail(new GitHubApiAuthenticationError(context)))),
           NotFound: () => Effect.fail(new GitHubApiNotFoundError(context)),
           Failed: ({ messages }) =>
@@ -521,6 +546,7 @@ export const make = Effect.gen(function* () {
         send({
           host: input.host,
           operation: input.operation,
+          owner: repositoryOwnerInPath(input.path),
           request,
           maxResponseBytes: input.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
           timeout: input.timeout,
@@ -547,6 +573,7 @@ export const make = Effect.gen(function* () {
       const response = yield* send({
         host,
         operation: input.operation,
+        owner: typeof input.variables?.owner === "string" ? input.variables.owner : undefined,
         request: HttpClientRequest.post(gitHubApiUrls(host).graphql).pipe(
           HttpClientRequest.acceptJson,
           HttpClientRequest.bodyJsonUnsafe({
