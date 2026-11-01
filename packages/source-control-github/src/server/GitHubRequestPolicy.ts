@@ -9,6 +9,7 @@ import * as Layer from "effect/Layer";
 import * as Redacted from "effect/Redacted";
 import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
 
 import * as Option from "effect/Option";
@@ -32,6 +33,15 @@ export const PinnedGitHubCredential = Context.Reference<{
 } | null>("@t3tools/source-control-github/server/GitHubRequestPolicy/PinnedGitHubCredential", {
   defaultValue: () => null,
 });
+
+/**
+ * The repository owner the running operation acts for, so that requests naming no repository
+ * (a mutation by node id) still carry the token of the account that can see it.
+ */
+export const CredentialOwner = Context.Reference<string | null>(
+  "@t3tools/source-control-github/server/GitHubRequestPolicy/CredentialOwner",
+  { defaultValue: () => null },
+);
 
 export class GitHubApiRequestError extends Schema.TaggedError<GitHubApiRequestError>()(
   "GitHubApiRequestError",
@@ -189,6 +199,8 @@ export type GitHubAnswer<A> = {
 export interface GitHubRequest {
   readonly host: string;
   readonly operation: string;
+  /** The repository owner the request itself names, when it names one. */
+  readonly owner?: string | undefined;
   /** The quota the request spends: `core` for REST, `graphql` for GraphQL. */
   readonly resource: string;
   readonly allowReserve: boolean;
@@ -264,8 +276,8 @@ export const make = Effect.gen(function* () {
   const limits = yield* SourceControlRateLimit.SourceControlRateLimit;
   const slots = yield* Semaphore.make(CONCURRENCY);
 
-  const personalCredential = (host: string) =>
-    credentials.get(host).pipe(
+  const personalCredential = (host: string, owner: string | null) =>
+    credentials.get(host, owner ?? undefined).pipe(
       Effect.map((held): ChosenCredential => ({
         token: held.token,
         fingerprint: held.fingerprint,
@@ -286,9 +298,14 @@ export const make = Effect.gen(function* () {
     });
   });
 
-  const choose = Effect.fn("GitHubRest.credential")(function* (host: string, personal: boolean) {
+  const choose = Effect.fn("GitHubRest.credential")(function* (
+    host: string,
+    personal: boolean,
+    owner: string | null,
+  ) {
     const pinned = yield* PinnedGitHubCredential;
-    if (pinned !== null) {
+    const environment = yield* HostProcess.Environment;
+    if (pinned !== null && !GitHubCredentials.ownerHasOwnAccount(environment, host, owner)) {
       if (pinned.host !== host) {
         return yield* new GitHubApiAuthenticationError({ host, operation: "credential" });
       }
@@ -308,18 +325,20 @@ export const make = Effect.gen(function* () {
         fromApp: false,
       };
     }
-    if (personal) return yield* personalCredential(host);
+    if (personal) return yield* personalCredential(host, owner);
     const app = yield* Effect.result(appCredential(host));
     // An app session that cannot refresh right now steps aside for the user's own credential.
     if (Result.isFailure(app)) {
-      return yield* personalCredential(host).pipe(Effect.mapError(() => app.failure));
+      return yield* personalCredential(host, owner).pipe(Effect.mapError(() => app.failure));
     }
-    if (Option.isNone(app.success)) return yield* personalCredential(host);
+    if (Option.isNone(app.success)) return yield* personalCredential(host, owner);
     return { ...app.success.value, fromApp: true } satisfies ChosenCredential;
   });
 
   const credential: GitHubRequestPolicy["Service"]["credential"] = (host, options) =>
-    choose(normalizeHost(host), options?.personal === true).pipe(
+    Effect.gen(function* () {
+      return yield* choose(normalizeHost(host), options?.personal === true, yield* CredentialOwner);
+    }).pipe(
       Effect.map(({ token, fingerprint, source }) => ({
         token,
         fingerprint,
@@ -336,6 +355,7 @@ export const make = Effect.gen(function* () {
     ) => Effect.Effect<GitHubAnswer<A>, E, R>,
   ) {
     const host = normalizeHost(input.host);
+    const owner = (yield* CredentialOwner) ?? input.owner ?? null;
     const context = { host, operation: input.operation };
     yield* Effect.annotateCurrentSpan({
       "github.host": host,
@@ -376,7 +396,7 @@ export const make = Effect.gen(function* () {
         case "Unauthorized":
           // The source may hold a newer token than the one that was refused.
           yield* appSignIn.invalidate(host, Redacted.value(held.token));
-          yield* credentials.invalidate(host);
+          yield* credentials.invalidate(host, owner ?? undefined);
           return yield* new GitHubApiAuthenticationError(context);
         case "NotFound":
           return yield* new GitHubApiNotFoundError({
@@ -425,7 +445,7 @@ export const make = Effect.gen(function* () {
               }),
             );
             if (held.fromApp && refusedToApp(answer)) {
-              const personal = yield* Effect.option(personalCredential(host));
+              const personal = yield* Effect.option(personalCredential(host, owner));
               if (Option.isSome(personal)) {
                 yield* quota.observe(host, answer.headers);
                 yield* limits.recordSuccess({ ...key, lease });
@@ -442,7 +462,7 @@ export const make = Effect.gen(function* () {
         );
 
     // Only an app credential is handed on, so this runs at most twice.
-    let held = yield* choose(host, false);
+    let held = yield* choose(host, false, owner);
     while (true) {
       const outcome = yield* attempt(held);
       if (outcome._tag === "Done") return outcome.value;

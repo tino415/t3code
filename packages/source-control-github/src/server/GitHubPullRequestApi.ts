@@ -726,6 +726,34 @@ export class GitHubPullRequestApi extends Context.Service<
   }
 >()("@t3tools/source-control-github/server/GitHubPullRequestApi") {}
 
+/**
+ * Runs each operation naming a `repository` under that owner's credential, including the requests
+ * inside it that name no repository themselves.
+ */
+type RepositoryOperation = (
+  input: { readonly repository?: unknown },
+  ...rest: ReadonlyArray<unknown>
+) => Effect.Effect<unknown>;
+
+function withRepositoryOwnerCredentials<Service extends object>(service: Service): Service {
+  return Object.fromEntries(
+    Object.entries(service).map(([name, operation]: [string, RepositoryOperation]) => [
+      name,
+      (...[input, ...rest]: Parameters<RepositoryOperation>) => {
+        const owner =
+          typeof input?.repository === "string"
+            ? parseRepositorySelector(input.repository).owner
+            : "";
+        return owner === ""
+          ? operation(input, ...rest)
+          : operation(input, ...rest).pipe(
+              Effect.provideService(GitHubRequestPolicy.CredentialOwner, owner),
+            );
+      },
+    ]),
+  ) as Service;
+}
+
 function parseRepositorySelector(value: string): {
   readonly owner: string;
   readonly name: string;
@@ -1720,7 +1748,7 @@ export const make = Effect.gen(function* () {
     batchKey: GitHubGraphQlClient.batchKey,
   }).pipe(RequestResolver.batchN(FILES_VIEWED_PER_REQUEST));
 
-  return GitHubPullRequestApi.of({
+  const service = GitHubPullRequestApi.of({
     withVerifiedCredential,
     revalidateChecks,
     getRoutingIdentity,
@@ -2831,6 +2859,7 @@ export const make = Effect.gen(function* () {
       );
     }),
   });
+  return withRepositoryOwnerCredentials(service);
 });
 
 export const layer = Layer.effect(GitHubPullRequestApi, make);

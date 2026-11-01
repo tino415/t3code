@@ -6,6 +6,7 @@ import * as Equal from "effect/Equal";
 import * as Exit from "effect/Exit";
 import * as Hash from "effect/Hash";
 import * as Effect from "effect/Effect";
+import * as HostProcess from "@t3tools/shared/HostProcess";
 import type {
   PullRequestActor,
   PullRequestCapabilities,
@@ -15,6 +16,7 @@ import type {
 } from "@t3tools/contracts";
 
 import * as SourceControlRateLimit from "@t3tools/source-control-core/server/SourceControlRateLimit";
+import * as GitHubCredentials from "./GitHubCredentials.ts";
 import * as GitHubPullRequestApi from "./GitHubPullRequestApi.ts";
 import {
   PullRequestProviderError,
@@ -753,5 +755,12 @@ export const make = Effect.gen(function* () {
         .pipe(Effect.mapError(fail("setThreadResolution"))),
   };
 
-  return provider;
+  if (GitHubCredentials.ownerAccounts(yield* HostProcess.Environment).size === 0) return provider;
+  // A read spanning repositories carries one token, which cannot see another account's repositories.
+  const {
+    listChangeRequestsAcross: _listChangeRequestsAcross,
+    listChangeRequestStats: _listChangeRequestStats,
+    ...readsPerRepository
+  } = provider;
+  return readsPerRepository satisfies PullRequestProviderApi as PullRequestProviderApi;
 });
