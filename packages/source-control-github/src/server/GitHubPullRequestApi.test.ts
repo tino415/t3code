@@ -3924,6 +3924,55 @@ layer("GitHubPullRequestApi.layer", (it) => {
     }),
   );
 
+  it.effect("reports the overall verdict when the token cannot read check details", () =>
+    Effect.gen(function* () {
+      mockedExecute.mockReturnValueOnce(
+        Effect.succeed(
+          output(
+            encodeJson(
+              coreResponse({
+                commits: {
+                  nodes: [
+                    {
+                      commit: {
+                        statusCheckRollup: {
+                          state: "FAILURE",
+                          contexts: {
+                            nodes: [
+                              null,
+                              { __typename: "StatusContext", context: "lint", state: "SUCCESS" },
+                            ],
+                            pageInfo: { hasNextPage: true },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              }),
+            ),
+          ),
+        ),
+      );
+      const cli = yield* GitHubPullRequestApi.GitHubPullRequestApi;
+
+      const detail = yield* cli.getPullRequestDetail({
+        cwd: "/w",
+        repository: "acme/web",
+        host: "github.com",
+        number: 7,
+      });
+
+      expect(detail.checks.map(({ name, status }) => ({ name, status }))).toEqual([
+        { name: "lint", status: "success" },
+        { name: "All checks", status: "failure" },
+      ]);
+      expect(detail.checksState).toBe("failing");
+      expect(queryAt(0)).toContain("statusCheckRollup { state contexts");
+      assert.strictEqual(mockedExecute.mock.calls.length, 1);
+    }),
+  );
+
   it.effect("decodes reviewers, labels and workflow checks without another detail read", () =>
     Effect.gen(function* () {
       mockedExecute.mockReturnValueOnce(
