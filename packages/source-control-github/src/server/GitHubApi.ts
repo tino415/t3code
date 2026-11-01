@@ -239,11 +239,20 @@ const decodeGraphQlErrors = Schema.decodeUnknownOption(
         Schema.Struct({
           type: Schema.optional(Schema.String),
           message: Schema.optional(Schema.String),
+          path: Schema.optional(Schema.Array(Schema.Unknown)),
         }),
       ),
     }),
   ),
 );
+
+/** Fine-grained tokens cannot be granted check runs, and GitHub still answers everything else. */
+function failingGraphQlErrors(body: string) {
+  const errors = Option.getOrUndefined(decodeGraphQlErrors(body))?.errors.filter(
+    (error) => !(error.type === "FORBIDDEN" && error.path?.includes("statusCheckRollup")),
+  );
+  return errors?.length ? errors : undefined;
+}
 
 /** A REST failure body: `{ message, errors: [{ message } | { resource, field, code }] }`. */
 const decodeRestErrors = Schema.decodeUnknownOption(
@@ -308,9 +317,7 @@ function classify(input: {
   readonly acceptNotModified: boolean;
 }): Answer {
   const { status, headers, body } = input;
-  const errors = input.graphql
-    ? Option.getOrUndefined(decodeGraphQlErrors(body))?.errors
-    : undefined;
+  const errors = input.graphql ? failingGraphQlErrors(body) : undefined;
   const types = errors?.flatMap((error) => (error.type === undefined ? [] : [error.type])) ?? [];
   const messages = errors?.flatMap((error) => (error.message === undefined ? [] : [error.message]));
   if (

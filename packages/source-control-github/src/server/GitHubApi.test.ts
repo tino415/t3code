@@ -233,6 +233,57 @@ describe("GitHubApi", () => {
     }).pipe(Effect.provide(layer));
   });
 
+  const refusedCheckDetail = {
+    type: "FORBIDDEN",
+    path: [
+      "repository",
+      "pullRequest",
+      "commits",
+      "nodes",
+      0,
+      "commit",
+      "statusCheckRollup",
+      "contexts",
+      "nodes",
+      0,
+    ],
+    message: "Resource not accessible by personal access token",
+  };
+
+  it.effect("keeps the answer when the only refusal is a token's check details", () => {
+    const answer = { data: { viewer: { id: "1" } }, errors: [refusedCheckDetail] };
+    const { layer } = harness(() => json(answer));
+    return Effect.gen(function* () {
+      const api = yield* GitHubApi.GitHubApi;
+      const body = yield* api.graphql({
+        host: "github.com",
+        operation: "detail",
+        query: "query { viewer { id } }",
+      });
+      expect(JSON.parse(body)).toEqual(answer);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("still fails when a refusal of check details comes with another error", () => {
+    const { layer } = harness(() =>
+      json({
+        data: null,
+        errors: [
+          refusedCheckDetail,
+          { type: "FORBIDDEN", path: ["repository", "pullRequest"], message: "Repository refused" },
+        ],
+      }),
+    );
+    return Effect.gen(function* () {
+      const api = yield* GitHubApi.GitHubApi;
+      const error = yield* Effect.flip(
+        api.graphql({ host: "github.com", operation: "detail", query: "query { viewer { id } }" }),
+      );
+      expect(error._tag).toBe("GitHubApiResponseError");
+      expect(error.message).toContain("Repository refused");
+    }).pipe(Effect.provide(layer));
+  });
+
   it.effect(
     "reads a NOT_FOUND answer with another error as a failure, not a missing resource",
     () => {

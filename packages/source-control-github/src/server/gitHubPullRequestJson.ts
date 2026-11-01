@@ -753,22 +753,27 @@ const RawCoreSchema = Schema.Struct({
               commit: Schema.Struct({
                 statusCheckRollup: Schema.NullOr(
                   Schema.Struct({
+                    state: Schema.optional(Schema.NullOr(Schema.String)),
                     contexts: Schema.Struct({
                       nodes: Schema.Array(
-                        Schema.Struct({
-                          ...RawCheckSchema.fields,
-                          checkSuite: Schema.optional(
-                            Schema.NullOr(
-                              Schema.Struct({
-                                workflowRun: Schema.NullOr(
-                                  Schema.Struct({
-                                    workflow: Schema.NullOr(Schema.Struct({ name: Schema.String })),
-                                  }),
-                                ),
-                              }),
+                        Schema.NullOr(
+                          Schema.Struct({
+                            ...RawCheckSchema.fields,
+                            checkSuite: Schema.optional(
+                              Schema.NullOr(
+                                Schema.Struct({
+                                  workflowRun: Schema.NullOr(
+                                    Schema.Struct({
+                                      workflow: Schema.NullOr(
+                                        Schema.Struct({ name: Schema.String }),
+                                      ),
+                                    }),
+                                  ),
+                                }),
+                              ),
                             ),
-                          ),
-                        }),
+                          }),
+                        ),
                       ),
                       pageInfo: Schema.Struct({ hasNextPage: Schema.Boolean }),
                     }),
@@ -866,7 +871,7 @@ export const pullRequestCoreGraphQlQuery = (host: string) => {
       }
       labels(first: 100) { nodes { name color } }
       commits(last: 1) {
-        nodes { commit { statusCheckRollup { contexts(first: 100) {
+        nodes { commit { statusCheckRollup { state contexts(first: 100) {
           ${checkContextNodesSelection(host)}
           pageInfo { hasNextPage }
         } } } }
@@ -2361,7 +2366,10 @@ export function decodePullRequestCoreJson(
   if (!Result.isSuccess(decoded)) return Result.fail(decoded.failure);
   const repository = decoded.success.data.repository;
   const pr = repository.pullRequest;
-  const contexts = pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
+  const rollup = pr.commits.nodes[0]?.commit.statusCheckRollup;
+  const contexts = rollup?.contexts;
+  const readableContexts = (contexts?.nodes ?? []).filter((node) => node !== null);
+  const checksRefused = readableContexts.length < (contexts?.nodes.length ?? 0);
   return Result.succeed({
     reviewRequestTeams: pr.reviewRequests.nodes.flatMap(
       ({ requestedReviewer }) => toRequestedTeam(requestedReviewer) ?? [],
@@ -2372,7 +2380,10 @@ export function decodePullRequestCoreJson(
         requestedReviewer === null ? [] : [requestedReviewer],
       ),
       labels: pr.labels.nodes,
-      statusCheckRollup: toCheckContexts(contexts?.nodes ?? []),
+      statusCheckRollup: [
+        ...toCheckContexts(readableContexts),
+        ...(checksRefused ? [allChecksVerdict(rollup?.state)] : []),
+      ],
     }),
     headRepositoryNameWithOwner: trimmed(pr.headRepository?.nameWithOwner),
     viewerAccess: {
@@ -2393,8 +2404,17 @@ export function decodePullRequestCoreJson(
             behindBy: pr.baseRef.compare.behindBy,
             viewerCanUpdate: pr.viewerCanUpdateBranch,
           },
-    checksTruncated: contexts?.pageInfo.hasNextPage === true,
+    checksTruncated: !checksRefused && contexts?.pageInfo.hasNextPage === true,
   });
+}
+
+/** Stands in for the check runs a token may not read: the rollup still names their outcome. */
+function allChecksVerdict(state: string | null | undefined): GitHubCheckContext {
+  return {
+    context: "All checks",
+    state,
+    description: "This GitHub token cannot read individual check runs.",
+  };
 }
 
 export function decodePullRequestDetailJson(
