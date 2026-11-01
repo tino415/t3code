@@ -150,6 +150,7 @@ query PullRequestCore(
         nodes {
           commit {
             statusCheckRollup {
+              state
               contexts(first: 100) {
                 nodes {
                   ...CheckContext

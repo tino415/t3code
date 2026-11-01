@@ -3332,6 +3332,62 @@ layer("GitHubPullRequestApi.layer", (it) => {
       }),
   );
 
+  it.effect("reports the overall verdict when the token cannot read check details", () =>
+    Effect.gen(function* () {
+      mockedExecute.mockReturnValueOnce(
+        Effect.succeed(
+          output(
+            encodeJson(
+              coreResponse({
+                commits: {
+                  nodes: [
+                    {
+                      commit: {
+                        statusCheckRollup: {
+                          state: "FAILURE",
+                          contexts: {
+                            nodes: [
+                              null,
+                              {
+                                __typename: "StatusContext",
+                                context: "lint",
+                                state: "SUCCESS",
+                                targetUrl: null,
+                                createdAt: "2026-07-01T00:00:00Z",
+                                description: null,
+                              },
+                            ],
+                            pageInfo: { hasNextPage: true },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              }),
+            ),
+          ),
+        ),
+      );
+      const cli = yield* GitHubPullRequestApi.GitHubPullRequestApi;
+
+      const detail = yield* cli.getPullRequestDetail({
+        cwd: "/w",
+        repository: "acme/web",
+        host: "github.com",
+        number: 7,
+      });
+
+      expect(detail.checks.map(({ name, status }) => ({ name, status }))).toEqual([
+        { name: "All checks", status: "failure" },
+        { name: "lint", status: "success" },
+      ]);
+      expect(detail.checksState).toBe("failing");
+      expect(queryAt(0)).toMatch(/statusCheckRollup\s*\{\s*state\s+contexts/);
+      assert.strictEqual(mockedExecute.mock.calls.length, 1);
+    }),
+  );
+
   it.effect("decodes reviewers, labels and workflow checks without another detail read", () =>
     Effect.gen(function* () {
       mockedExecute.mockReturnValueOnce(
@@ -3360,6 +3416,7 @@ layer("GitHubPullRequestApi.layer", (it) => {
                     {
                       commit: {
                         statusCheckRollup: {
+                          state: "SUCCESS",
                           contexts: {
                             nodes: [
                               checkRun({
@@ -3426,6 +3483,7 @@ layer("GitHubPullRequestApi.layer", (it) => {
                       {
                         commit: {
                           statusCheckRollup: {
+                            state: "SUCCESS",
                             contexts: {
                               nodes: [
                                 checkRun({
@@ -3496,6 +3554,7 @@ layer("GitHubPullRequestApi.layer", (it) => {
               {
                 commit: {
                   statusCheckRollup: {
+                    state: "SUCCESS",
                     contexts: {
                       nodes: [],
                       pageInfo: { hasNextPage: true },

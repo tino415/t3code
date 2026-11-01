@@ -43,6 +43,22 @@ function queryHash(query: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
+/** Fine-grained tokens cannot be granted check runs, and GitHub still answers everything else. */
+const refusedCheckDetails = (error: { readonly [key: string]: unknown }) =>
+  error["type"] === "FORBIDDEN" &&
+  Array.isArray(error["path"]) &&
+  error["path"].includes("contexts");
+
+type GraphQlError = { readonly [key: string]: unknown };
+
+const answerWithoutRefusedChecks = <A extends { readonly errors?: ReadonlyArray<GraphQlError> | undefined }>(
+  answer: A,
+): A => {
+  const { errors, ...rest } = answer;
+  const failing = errors?.filter((error) => !refusedCheckDetails(error));
+  return (failing?.length ? { ...rest, errors: failing } : rest) as A;
+};
+
 export const isNotFoundOnly = (error: unknown): boolean =>
   GraphQLClientError.isGraphQLClientError(error) &&
   error.reason._tag === "ResponseError" &&
@@ -91,7 +107,7 @@ export class GitHubGraphQlAuth extends GraphQLMiddleware.Service<
                         _tag: "Ok" as const,
                         // The source is local; never trust one GitHub's answer carries.
                         value: {
-                          ...answer,
+                          ...answerWithoutRefusedChecks(answer),
                           headers:
                             source === undefined
                               ? Headers.remove(responseHeaders, CREDENTIAL_SOURCE_HEADER)

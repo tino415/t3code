@@ -996,7 +996,10 @@ export function toPullRequestCore(result: PullRequestCore.Result): GitHubPullReq
   const repository = result.repository;
   const pr = repository?.pullRequest;
   if (repository == null || pr == null) return null;
-  const contexts = nodesOf(pr.commits)[0]?.commit.statusCheckRollup?.contexts;
+  const rollup = nodesOf(pr.commits)[0]?.commit.statusCheckRollup;
+  const contexts = rollup?.contexts;
+  const readableContexts = nodesOf(contexts);
+  const checksRefused = readableContexts.length < (contexts?.nodes?.length ?? 0);
   return {
     reviewRequestTeams: nodesOf(pr.reviewRequests).flatMap(
       ({ requestedReviewer }) => toRequestedTeam(requestedReviewer) ?? [],
@@ -1022,7 +1025,10 @@ export function toPullRequestCore(result: PullRequestCore.Result): GitHubPullReq
               ],
       ),
       labels: nodesOf(pr.labels),
-      statusCheckRollup: toCheckContexts(nodesOf(contexts)),
+      statusCheckRollup: [
+        ...toCheckContexts(readableContexts),
+        ...(checksRefused ? [allChecksVerdict(rollup?.state)] : []),
+      ],
     }),
     headRepositoryNameWithOwner: trimmed(pr.headRepository?.nameWithOwner),
     maintainerCanModify: pr.maintainerCanModify,
@@ -1053,7 +1059,7 @@ export function toPullRequestCore(result: PullRequestCore.Result): GitHubPullReq
             behindBy: pr.baseRef.compare.behindBy,
             viewerCanUpdate: pr.viewerCanUpdateBranch,
           },
-    checksTruncated: contexts?.pageInfo.hasNextPage === true,
+    checksTruncated: !checksRefused && contexts?.pageInfo.hasNextPage === true,
   };
 }
 
@@ -1172,6 +1178,15 @@ export function toPullRequestCheckContextsPage(result: PullRequestCheckContexts.
     headSha: pr.headRefOid,
     contexts: toCheckContexts(nodesOf(contexts)),
     nextCursor: nextCursorOf(contexts?.pageInfo),
+  };
+}
+
+/** Stands in for the check runs a token may not read: the rollup still names their outcome. */
+function allChecksVerdict(state: string | null | undefined): GitHubCheckContext {
+  return {
+    context: "All checks",
+    state,
+    description: "This GitHub token cannot read individual check runs.",
   };
 }
 
