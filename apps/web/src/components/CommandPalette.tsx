@@ -2429,8 +2429,23 @@ function OpenCommandPaletteDialog(props: {
 
     const command = resolveShortcutCommand(event, keybindings, {
       platform: navigator.platform,
-      context: { modelPickerOpen: false, editableFocus: true },
+      context: { modelPickerOpen: false, editableFocus: true, commandPaletteOpen: true },
     });
+    if (command === "commandPalette.next" || command === "commandPalette.previous") {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.nativeEvent.isComposing) return;
+      // Base UI ignores modified keys, so hand it the plain arrow instead.
+      event.currentTarget.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: command === "commandPalette.next" ? "ArrowDown" : "ArrowUp",
+          bubbles: true,
+          cancelable: true,
+          repeat: event.repeat,
+        }),
+      );
+      return;
+    }
     if (command === "thread.pin") {
       const highlightedItem = findHighlightedCommandPaletteItem(
         displayedGroups,
