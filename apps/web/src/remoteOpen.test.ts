@@ -73,8 +73,8 @@ describe("resolveRemoteOpenState", () => {
     expect(state).toEqual({ mode: "remote-links", host: { kind: "ssh-alias", host: "sol" } });
     if (state.mode !== "remote-links") throw new Error("Expected a remote link");
     expect(
-      buildRemoteOpenUrl({ editor: "vscode", ...state.host, absolutePath: "/work/project" }),
-    ).toBe("vscode://vscode-remote/ssh-remote+sol/work/project");
+      buildRemoteOpenUrl({ editor: "vscodium", ...state.host, absolutePath: "/work/project" }),
+    ).toBe("vscodium://vscode-remote/ssh-remote+sol/work/project");
     expect(
       buildRemoteOpenUrl({ editor: "zed", ...state.host, absolutePath: "/work/project" }),
     ).toBe("zed://ssh/sol/work/project");
@@ -101,8 +101,8 @@ describe("resolveRemoteOpenState", () => {
     expect(state.mode).toBe("remote-links");
     if (state.mode !== "remote-links") throw new Error("Expected a remote link");
     expect(
-      buildRemoteOpenUrl({ editor: "vscode", ...state.host, absolutePath: "/work/project" }),
-    ).toBe("vscode://vscode-remote/ssh-remote+admin-user%40server/work/project");
+      buildRemoteOpenUrl({ editor: "vscodium", ...state.host, absolutePath: "/work/project" }),
+    ).toBe("vscodium://vscode-remote/ssh-remote+admin-user%40server/work/project");
     expect(
       buildRemoteOpenUrl({ editor: "zed", ...state.host, absolutePath: "/work/project" }),
     ).toBe("zed://ssh/admin-user@server/work/project");
@@ -146,8 +146,8 @@ describe("resolveRemoteOpenState", () => {
 describe("buildRemoteOpenUrl", () => {
   it("roots Windows paths", () => {
     expect(
-      buildRemoteOpenUrl({ editor: "vscode", host: "sol", absolutePath: "C:\\Users\\theo" }),
-    ).toBe("vscode://vscode-remote/ssh-remote+sol/C%3A/Users/theo");
+      buildRemoteOpenUrl({ editor: "vscodium", host: "sol", absolutePath: "C:\\Users\\theo" }),
+    ).toBe("vscodium://vscode-remote/ssh-remote+sol/C%3A/Users/theo");
   });
 
   it("drops the Windows drive letter for Zed", () => {
@@ -161,10 +161,10 @@ describe("buildRemoteOpenUrl", () => {
 
   it("adds a file position only for confirmed VS Code-family file targets", () => {
     const targets = [
-      ["vscode", true, "vscode://vscode-remote/ssh-remote+sol/tmp/my%20file.md:1:1"],
+      ["vscodium", true, "vscodium://vscode-remote/ssh-remote+sol/tmp/my%20file.md:1:1"],
       ["cursor", true, "cursor://vscode-remote/ssh-remote+sol/tmp/my%20file.md:1:1"],
-      ["vscode", false, "vscode://vscode-remote/ssh-remote+sol/tmp/my%20file.md"],
-      ["vscode", undefined, "vscode://vscode-remote/ssh-remote+sol/tmp/my%20file.md"],
+      ["vscodium", false, "vscodium://vscode-remote/ssh-remote+sol/tmp/my%20file.md"],
+      ["vscodium", undefined, "vscodium://vscode-remote/ssh-remote+sol/tmp/my%20file.md"],
       ["zed", true, "zed://ssh/sol/tmp/my%20file.md"],
       [
         "pycharm",

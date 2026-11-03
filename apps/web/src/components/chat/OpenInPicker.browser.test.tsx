@@ -10,7 +10,7 @@ import type { RemoteOpenState } from "../../remoteOpen";
 const state = vi.hoisted(() => ({
   allowed: new Set<string>(),
   remote: { mode: "local-exec" } as RemoteOpenState,
-  clientEditors: ["vscode"] as readonly EditorId[],
+  clientEditors: ["vscodium"] as readonly EditorId[],
   run: vi.fn(),
   openUrl: vi.fn(),
   setPreferred: vi.fn(),
@@ -73,7 +73,7 @@ import {
 
 const primary = EnvironmentId.make("primary");
 const selected = EnvironmentId.make("selected");
-const editors: readonly EditorId[] = ["vscode"];
+const editors: readonly EditorId[] = ["vscodium"];
 
 async function setup() {
   state.allowed.clear();
@@ -223,7 +223,7 @@ describe("open in editor announcement", () => {
     await pressOpenFavorite();
     expect(await spoken()).toBe("");
     await pressOpenFavorite();
-    expect(await spoken()).toBe("Opened in VS Code");
+    expect(await spoken()).toBe("Opened in VSCodium");
 
     for (const region of regions()) region.textContent = "";
     await act(async () => screen.rerender(<FavoriteEditorFallback />));
@@ -231,6 +231,6 @@ describe("open in editor announcement", () => {
     await pressOpenFavorite();
     expect(await spoken()).toBe("");
     await pressOpenFavorite();
-    expect(await spoken()).toBe("Opened in VS Code");
+    expect(await spoken()).toBe("Opened in VSCodium");
   });
 });

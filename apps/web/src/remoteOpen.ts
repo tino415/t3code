@@ -144,7 +144,12 @@ export function useRemoteOpenState(environmentId: EnvironmentId | null): RemoteO
   return useRemoteOpenResolution(environmentId).state;
 }
 
-const REMOTE_FALLBACK_EDITORS: ReadonlyArray<EditorId> = ["vscode"];
+const REMOTE_FALLBACK_EDITORS: ReadonlyArray<EditorId> = [
+  "cursor",
+  "vscode-insiders",
+  "vscodium",
+  "zed",
+];
 
 // Probed once per page: installed editors rarely change, and the probe spawns processes.
 const remoteCapableEditorsAtom = Atom.make((get): ReadonlyArray<EditorId> => {

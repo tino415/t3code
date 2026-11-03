@@ -41,7 +41,6 @@ import {
   Icon,
   KiroIcon,
   TraeIcon,
-  VisualStudioCode,
   VisualStudioCodeInsiders,
   VSCodium,
   Zed,
@@ -96,11 +95,6 @@ const resolveOpenInOptions = (platform: string, availableEditors: ReadonlyArray<
     {
       Icon: KiroIcon,
       value: "kiro",
-      kind: "brand",
-    },
-    {
-      Icon: VisualStudioCode,
-      value: "vscode",
       kind: "brand",
     },
     {
