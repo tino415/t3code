@@ -122,11 +122,11 @@ describe("buildRemoteOpenUrl", () => {
   it("builds a vscode-remote deep link", () => {
     expect(
       buildRemoteOpenUrl({
-        editor: "vscode",
+        editor: "vscodium",
         host: "sol.tail1234.ts.net",
         absolutePath: "/home/theo/code/my repo",
       }),
-    ).toBe("vscode://vscode-remote/ssh-remote+sol.tail1234.ts.net/home/theo/code/my%20repo");
+    ).toBe("vscodium://vscode-remote/ssh-remote+sol.tail1234.ts.net/home/theo/code/my%20repo");
   });
 
   it("uses the fork's scheme", () => {
@@ -137,8 +137,8 @@ describe("buildRemoteOpenUrl", () => {
 
   it("roots Windows paths", () => {
     expect(
-      buildRemoteOpenUrl({ editor: "vscode", host: "sol", absolutePath: "C:\\Users\\theo" }),
-    ).toBe("vscode://vscode-remote/ssh-remote+sol/C%3A/Users/theo");
+      buildRemoteOpenUrl({ editor: "vscodium", host: "sol", absolutePath: "C:\\Users\\theo" }),
+    ).toBe("vscodium://vscode-remote/ssh-remote+sol/C%3A/Users/theo");
   });
 
   it("builds Zed's ssh deep link", () => {

@@ -10,7 +10,7 @@ import type { RemoteOpenState } from "../../remoteOpen";
 const state = vi.hoisted(() => ({
   allowed: new Set<string>(),
   remote: { mode: "local-exec" } as RemoteOpenState,
-  clientEditors: ["vscode"] as readonly EditorId[],
+  clientEditors: ["vscodium"] as readonly EditorId[],
   run: vi.fn(),
   openUrl: vi.fn(),
   setPreferred: vi.fn(),
@@ -109,7 +109,7 @@ import { OpenInPicker } from "./OpenInPicker";
 
 const primary = EnvironmentId.make("primary");
 const selected = EnvironmentId.make("selected");
-const editors: readonly EditorId[] = ["vscode"];
+const editors: readonly EditorId[] = ["vscodium"];
 let renderer: ReactTestRenderer | undefined;
 
 beforeEach(() => {
@@ -180,16 +180,16 @@ it.each(["local-exec", "remote-links"] as const)(
   "selects the preferred editor without launching a %s workspace",
   async (mode) => {
     state.allowed.add(selected);
-    state.clientEditors = ["cursor", "vscode"];
+    state.clientEditors = ["cursor", "vscodium"];
     state.remote =
       mode === "local-exec" ? { mode } : { mode, host: { kind: "ssh-alias", host: "test-host" } };
-    await renderPicker(["cursor", "vscode"], true);
+    await renderPicker(["cursor", "vscodium"], true);
     expect(renderer!.root.findByProps({ "aria-label": "Open in Cursor" })).toBeDefined();
     await act(async () => {
-      renderer!.root.findByProps({ children: "VS Code" }).parent!.props.onClick();
+      renderer!.root.findByProps({ children: "VSCodium" }).parent!.props.onClick();
     });
-    expect(window.localStorage.getItem("t3code:last-editor")).toBe('"vscode"');
-    const openButton = renderer!.root.findByProps({ "aria-label": "Open in VS Code" });
+    expect(window.localStorage.getItem("t3code:last-editor")).toBe('"vscodium"');
+    const openButton = renderer!.root.findByProps({ "aria-label": "Open in VSCodium" });
     expect(state.run).not.toHaveBeenCalled();
     expect(state.openUrl).not.toHaveBeenCalled();
 
@@ -197,11 +197,11 @@ it.each(["local-exec", "remote-links"] as const)(
     if (mode === "local-exec") {
       expect(state.run).toHaveBeenCalledExactlyOnceWith({
         environmentId: selected,
-        input: { cwd: "/work/project", editor: "vscode" },
+        input: { cwd: "/work/project", editor: "vscodium" },
       });
     } else {
       expect(state.openUrl).toHaveBeenCalledExactlyOnceWith(
-        "vscode://vscode-remote/ssh-remote+test-host/work/project",
+        "vscodium://vscode-remote/ssh-remote+test-host/work/project",
       );
     }
   },
@@ -246,7 +246,7 @@ describe("host editor access", () => {
     await act(async () => primaryButton().props.onClick());
     expect(state.run).toHaveBeenCalledExactlyOnceWith({
       environmentId: selected,
-      input: { cwd: "/work/project", editor: "vscode" },
+      input: { cwd: "/work/project", editor: "vscodium" },
     });
   });
 });
@@ -258,11 +258,11 @@ describe("client editor links", () => {
     expect(primaryButton().props.disabled).toBe(false);
     await act(async () => primaryButton().props.onClick());
     expect(state.openUrl).toHaveBeenCalledExactlyOnceWith(
-      "vscode://vscode-remote/ssh-remote+test-host/work/project",
+      "vscodium://vscode-remote/ssh-remote+test-host/work/project",
     );
     expect(state.run).not.toHaveBeenCalled();
     expect(state.markHintSeen).toHaveBeenCalledOnce();
-    expect(state.setPreferred).toHaveBeenCalledExactlyOnceWith("vscode");
+    expect(state.setPreferred).toHaveBeenCalledExactlyOnceWith("vscodium");
   });
 
   it("does not change preferences when the client rejects the SSH URL", async () => {

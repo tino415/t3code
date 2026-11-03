@@ -71,16 +71,16 @@ describe("resolveOpenInOptions", () => {
     ["Win32", "File Explorer", FileExplorerIcon],
     ["Linux x86_64", "Files", FolderClosedIcon],
   ] as const)("includes the file manager with its icon on %s", (platform, label, Icon) => {
-    expect(resolveOpenInOptions(platform, ["cursor", "vscode", "file-manager"])).toEqual([
+    expect(resolveOpenInOptions(platform, ["cursor", "vscodium", "file-manager"])).toEqual([
       expect.objectContaining({ value: "cursor", label: "Cursor" }),
-      expect.objectContaining({ value: "vscode", label: "VS Code" }),
+      expect.objectContaining({ value: "vscodium", label: "VSCodium" }),
       expect.objectContaining({ value: "file-manager", label, Icon }),
     ]);
   });
 
   it("omits the file manager when unavailable or using remote editors", () => {
-    expect(resolveOpenInOptions("MacIntel", ["vscode"])).toEqual([
-      expect.objectContaining({ value: "vscode" }),
+    expect(resolveOpenInOptions("MacIntel", ["vscodium"])).toEqual([
+      expect.objectContaining({ value: "vscodium" }),
     ]);
     expect(resolveOpenInOptions("MacIntel", [])).toEqual([]);
   });

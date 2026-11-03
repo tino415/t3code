@@ -41,7 +41,7 @@ beforeEach(() => {
 
 it("does not use another environment's grant or change preferences when denied", async () => {
   state.allowed.add(primary);
-  const open = useOpenInPreferredEditor(secondary, ["vscode"]);
+  const open = useOpenInPreferredEditor(secondary, ["vscodium"]);
   const result = await open("/work/readme.md");
   assert(result._tag === "Failure");
   const error = Cause.squash(result.cause);
@@ -54,16 +54,16 @@ it("does not use another environment's grant or change preferences when denied",
 
 it("checks revocation and regrant when a retained editor callback is invoked", async () => {
   state.allowed.add(secondary);
-  const open = useOpenInPreferredEditor(secondary, ["vscode"]);
+  const open = useOpenInPreferredEditor(secondary, ["vscodium"]);
   state.allowed.delete(secondary);
   expect((await open("/work/readme.md:5"))._tag).toBe("Failure");
   expect(state.run).not.toHaveBeenCalled();
 
   state.allowed.add(secondary);
-  expect(await open("/work/readme.md:5")).toMatchObject({ _tag: "Success", value: "vscode" });
+  expect(await open("/work/readme.md:5")).toMatchObject({ _tag: "Success", value: "vscodium" });
   expect(state.run).toHaveBeenCalledExactlyOnceWith({
     environmentId: secondary,
-    input: { cwd: "/work/readme.md:5", editor: "vscode" },
+    input: { cwd: "/work/readme.md:5", editor: "vscodium" },
   });
   expect(state.setPreference).toHaveBeenCalledTimes(1);
 });
@@ -71,7 +71,7 @@ it("checks revocation and regrant when a retained editor callback is invoked", a
 it("keeps the stored available editor for an authorized launch", async () => {
   state.allowed.add(secondary);
   state.getPreference.mockReturnValue("cursor");
-  const open = useOpenInPreferredEditor(secondary, ["vscode", "cursor"]);
+  const open = useOpenInPreferredEditor(secondary, ["vscodium", "cursor"]);
   expect(await open("/work")).toMatchObject({ _tag: "Success", value: "cursor" });
   expect(state.run).toHaveBeenCalledExactlyOnceWith({
     environmentId: secondary,
@@ -82,7 +82,7 @@ it("keeps the stored available editor for an authorized launch", async () => {
 
 it("returns the existing failures for a missing environment or editor", async () => {
   state.allowed.add(secondary);
-  expect((await useOpenInPreferredEditor(null, ["vscode"])("/work"))._tag).toBe("Failure");
+  expect((await useOpenInPreferredEditor(null, ["vscodium"])("/work"))._tag).toBe("Failure");
   expect((await useOpenInPreferredEditor(secondary, [])("/work"))._tag).toBe("Failure");
   expect(state.run).not.toHaveBeenCalled();
 });

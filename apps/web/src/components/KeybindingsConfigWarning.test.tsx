@@ -31,7 +31,7 @@ vi.mock("../rpc/atomRegistry", () => ({
 vi.mock("../state/shell", () => ({ shellEnvironment: { openInEditor: "openInEditor" } }));
 vi.mock("../state/use-atom-command", () => ({ useAtomCommand: () => state.run }));
 vi.mock("../hooks/useLocalStorage", () => ({
-  getLocalStorageItem: () => "vscode",
+  getLocalStorageItem: () => "vscodium",
   setLocalStorageItem: vi.fn(),
   useLocalStorage: vi.fn(),
 }));
@@ -84,7 +84,7 @@ it("updates a visible warning on revocation and blocks its retained action until
         <KeybindingsConfigWarning
           environmentId={environmentId}
           configPath="/t3/keybindings.json"
-          availableEditors={["vscode"]}
+          availableEditors={["vscodium"]}
           message="Invalid shortcut"
         />
       </RegistryContext.Provider>,
@@ -114,6 +114,6 @@ it("updates a visible warning on revocation and blocks its retained action until
   await act(async () => open());
   expect(state.run).toHaveBeenCalledExactlyOnceWith({
     environmentId,
-    input: { cwd: "/t3/keybindings.json", editor: "vscode" },
+    input: { cwd: "/t3/keybindings.json", editor: "vscodium" },
   });
 });
