@@ -124,9 +124,14 @@ export function useRemoteOpenState(environmentId: EnvironmentId | null): RemoteO
 
 /**
  * Editors offered in remote-link mode. The desktop app probes the machine the
- * renderer runs on; a browser cannot, so it offers VS Code only.
+ * renderer runs on; a browser cannot, so it offers every remote-link editor.
  */
-const REMOTE_FALLBACK_EDITORS: ReadonlyArray<EditorId> = ["vscode"];
+const REMOTE_FALLBACK_EDITORS: ReadonlyArray<EditorId> = [
+  "cursor",
+  "vscode-insiders",
+  "vscodium",
+  "zed",
+];
 
 let cachedProbedEditors: ReadonlyArray<EditorId> | null = null;
 

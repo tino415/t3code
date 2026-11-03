@@ -121,10 +121,10 @@ it.effect("resends late editors without rolling back updates already sent", () =
 it.effect("sends no late snapshot when the scan matches the snapshot", () =>
   Effect.gen(function* () {
     const events = yield* withLateEditorConfig(
-      snapshotConfig({ availableEditors: ["vscode"] }),
+      snapshotConfig({ availableEditors: ["vscodium"] }),
       Stream.empty,
       {
-        resolveAvailableEditors: () => Effect.succeed(["vscode"]),
+        resolveAvailableEditors: () => Effect.succeed(["vscodium"]),
         resolveFileManagerRevealKind: () => Effect.succeed(undefined),
       },
     ).pipe(Stream.runCollect);
@@ -219,7 +219,7 @@ it.effect("recovers editors after a real scan outlasts the config timeout", () =
     const [late] = Array.from(yield* Fiber.join(lateFiber));
     assert.equal(late?.type, "snapshot");
     if (late?.type === "snapshot") {
-      assert.equal(late.config.availableEditors.includes("vscode"), true);
+      assert.equal(late.config.availableEditors.includes("vscodium"), true);
     }
   }).pipe(Effect.scoped),
 );

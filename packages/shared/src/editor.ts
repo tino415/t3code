@@ -10,7 +10,6 @@ import { isCommandAvailable } from "./shell.ts";
 type Editor = (typeof EDITORS)[number];
 
 const installNames: Partial<Record<Editor["id"], ReadonlyArray<string>>> = {
-  vscode: ["Visual Studio Code"],
   "vscode-insiders": ["Visual Studio Code - Insiders"],
   // `Antigravity.app` is the separate Hub, not the IDE.
   antigravity: ["Antigravity IDE"],
@@ -20,8 +19,8 @@ const installNames: Partial<Record<Editor["id"], ReadonlyArray<string>>> = {
 };
 
 /** True for `<name> <version>.app`, where the version is digits and dots (`IntelliJ IDEA 2026.1.4.app`).
- * A plain prefix match would let one editor steal another's bundle, e.g. stable VS Code resolving to
- * `Visual Studio Code - Insiders.app`. */
+ * A plain prefix match would let one editor steal another's bundle, e.g. `IntelliJ IDEA` resolving to
+ * `IntelliJ IDEA Ultimate.app`. */
 const isVersionedBundle = (entry: string, name: string) => {
   if (!entry.startsWith(`${name} `) || !entry.endsWith(".app")) return false;
   return /^\d[\d.]*$/.test(entry.slice(name.length + 1, -".app".length));
@@ -103,11 +102,7 @@ export const resolveEditorCommand = Effect.fn("editor.resolveEditorCommand")(fun
       }
     } else {
       const name =
-        editor.id === "vscode"
-          ? "Microsoft VS Code"
-          : editor.id === "vscode-insiders"
-            ? "Microsoft VS Code Insiders"
-            : editor.label;
+        editor.id === "vscode-insiders" ? "Microsoft VS Code Insiders" : editor.label;
       for (const root of roots) {
         candidates.push(
           path.join(root, name, "resources/app/bin", `${command}.cmd`),

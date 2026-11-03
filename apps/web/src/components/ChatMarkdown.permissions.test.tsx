@@ -94,8 +94,8 @@ vi.mock("../remoteOpen", () => ({
   useRemoteOpenResolution: () => ({ state: { mode: "local-exec" }, isResolved: true }),
 }));
 vi.mock("../hooks/useLocalStorage", () => ({
-  useLocalStorage: () => ["vscode", vi.fn()],
-  getLocalStorageItem: () => "vscode",
+  useLocalStorage: () => ["vscodium", vi.fn()],
+  getLocalStorageItem: () => "vscodium",
   setLocalStorageItem: vi.fn(),
 }));
 vi.mock("../hooks/useCopyToClipboard", () => ({
@@ -137,7 +137,7 @@ const linkedPullRequest: ThreadLinkedPullRequest = {
   url: "https://github.com/example/repo/pull/42",
 };
 const serverConfig = {
-  availableEditors: ["vscode", "file-manager"] as readonly EditorId[],
+  availableEditors: ["vscodium", "file-manager"] as readonly EditorId[],
   shellRevealInFileManager: true,
   shellRevealInFileManagerKind: "xdg-open",
   environment: { platform: { os: "linux" }, capabilities: { threadPullRequestLinking: true } },

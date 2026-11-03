@@ -172,13 +172,13 @@ it.effect("launches an installed editor with platform-safe arguments", () =>
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
-    yield* fileSystem.writeFileString(path.join(binDir, "code.CMD"), "@echo off\r\n");
+    yield* fileSystem.writeFileString(path.join(binDir, "codium.CMD"), "@echo off\r\n");
 
     let spawned: ChildProcess.StandardCommand | undefined;
     yield* Effect.gen(function* () {
       const launcher = yield* ExternalLauncher.ExternalLauncher;
       yield* launcher.launchEditor({
-        editor: "vscode",
+        editor: "vscodium",
         cwd: "C:\\workspace with spaces\\src\\index.ts:12:4",
       });
     }).pipe(
@@ -187,7 +187,7 @@ it.effect("launches an installed editor with platform-safe arguments", () =>
           platform: "win32",
           env: { PATH: binDir, PATHEXT: ".COM;.EXE;.BAT;.CMD" },
           resolveExecutable: (command) =>
-            command === "code" ? "C:\\Program Files\\Microsoft VS Code\\bin\\code.CMD" : command,
+            command === "codium" ? "C:\\Program Files\\VSCodium\\bin\\codium.CMD" : command,
           onSpawn: (command) => {
             spawned = command;
           },
@@ -199,7 +199,7 @@ it.effect("launches an installed editor with platform-safe arguments", () =>
     assert.equal(
       spawned.command,
       [
-        '^"C:\\Program^ Files\\Microsoft^ VS^ Code\\bin\\code.CMD^"',
+        '^"C:\\Program^ Files\\VSCodium\\bin\\codium.CMD^"',
         '^"--goto^"',
         '^"C:\\workspace^ with^ spaces\\src\\index.ts:12:4^"',
       ].join(" "),
@@ -938,7 +938,7 @@ it.live.skipIf(windowsHost)("a stalled handler probe drops only the file manager
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
-    for (const name of ["xdg-open", "xdg-mime", "code"]) {
+    for (const name of ["xdg-open", "xdg-mime", "codium"]) {
       const filePath = path.join(binDir, name);
       yield* fileSystem.writeFileString(filePath, "#!/bin/sh\n");
       yield* fileSystem.chmod(filePath, 0o755);
@@ -957,7 +957,7 @@ it.live.skipIf(windowsHost)("a stalled handler probe drops only the file manager
       ),
     );
 
-    assert.equal(editors.includes("vscode"), true);
+    assert.equal(editors.includes("vscodium"), true);
     assert.equal(editors.includes("file-manager"), false);
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
@@ -989,7 +989,7 @@ it.effect("discovers editors through the service API", () =>
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
-    yield* fileSystem.writeFileString(path.join(binDir, "code.CMD"), "@echo off\r\n");
+    yield* fileSystem.writeFileString(path.join(binDir, "codium.CMD"), "@echo off\r\n");
     yield* fileSystem.writeFileString(path.join(binDir, "explorer.CMD"), "@echo off\r\n");
 
     const editors = yield* Effect.gen(function* () {
@@ -1004,7 +1004,7 @@ it.effect("discovers editors through the service API", () =>
       ),
     );
 
-    assert.equal(editors.includes("vscode"), true);
+    assert.equal(editors.includes("vscodium"), true);
     assert.equal(editors.includes("file-manager"), true);
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
@@ -1054,8 +1054,8 @@ for (const { platform, installPath, editor, args } of [
   },
   {
     platform: "win32",
-    installPath: "Programs/Microsoft VS Code/bin/code.cmd",
-    editor: "vscode",
+    installPath: "Programs/VSCodium/bin/codium.cmd",
+    editor: "vscodium",
     args: ['^"--goto^"', '^"/workspace^ with^ spaces/file.ts:12:4^"'],
   },
   {
@@ -1255,11 +1255,8 @@ it.effect("matches macOS bundles on the name boundary only", () =>
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
 
-// `Visual Studio Code - Insiders.app` starts with the stable VS Code install
-// name, so a plain prefix match let the stable editor resolve to the Insiders
-// bundle. Insiders has to stay reachable under its own name, stable VS Code has
-// to stay unresolved.
-it.effect("keeps the macOS VS Code Insiders bundle out of stable VS Code", () =>
+// Insiders stays reachable under its own bundle name.
+it.effect("resolves the macOS VS Code Insiders bundle under its own name", () =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -1293,7 +1290,6 @@ it.effect("keeps the macOS VS Code Insiders bundle out of stable VS Code", () =>
       ),
     );
 
-    assert.notInclude(editors, "vscode");
     assert.include(editors, "vscode-insiders");
     assert.equal(spawned?.command, path.join(bin, "code-insiders"));
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
@@ -1411,7 +1407,7 @@ it.effect("memoizes editor discovery and refreshes after the cache window", () =
     const launcher = yield* ExternalLauncher.ExternalLauncher;
 
     const first = yield* launcher.resolveAvailableEditors();
-    assert.equal(first.includes("vscode"), true);
+    assert.equal(first.includes("vscodium"), true);
     const statCallsAfterFirstScan = statCalls;
     assert.isAbove(statCallsAfterFirstScan, 0);
 
@@ -1490,7 +1486,7 @@ it.effect("keeps scanning after the caller is interrupted and shares that scan",
 
     yield* Deferred.succeed(release, undefined);
     const editors = yield* Fiber.join(next);
-    assert.equal(editors.includes("vscode"), true);
+    assert.equal(editors.includes("vscodium"), true);
   }).pipe(
     Effect.provide(
       Layer.mergeAll(
@@ -1514,18 +1510,18 @@ const launchWindowsShimEditor = (cwd: string) =>
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const binDir = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-editors-" });
-    yield* fileSystem.writeFileString(path.join(binDir, "code.CMD"), "@echo off\r\n");
+    yield* fileSystem.writeFileString(path.join(binDir, "codium.CMD"), "@echo off\r\n");
     let spawned: ChildProcess.StandardCommand | undefined;
     const exit = yield* Effect.gen(function* () {
       const launcher = yield* ExternalLauncher.ExternalLauncher;
-      return yield* launcher.launchEditor({ editor: "vscode", cwd }).pipe(Effect.exit);
+      return yield* launcher.launchEditor({ editor: "vscodium", cwd }).pipe(Effect.exit);
     }).pipe(
       Effect.provide(
         layerTest({
           platform: "win32",
           env: { PATH: binDir, PATHEXT: ".COM;.EXE;.BAT;.CMD" },
           resolveExecutable: (command) =>
-            command === "code" ? "C:\\Program Files\\Microsoft VS Code\\bin\\code.CMD" : command,
+            command === "codium" ? "C:\\Program Files\\VSCodium\\bin\\codium.CMD" : command,
           onSpawn: (command) => {
             spawned = command;
           },
