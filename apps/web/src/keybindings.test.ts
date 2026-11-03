@@ -1690,3 +1690,28 @@ describe("Usage shortcuts", () => {
     );
   });
 });
+
+describe("Command palette navigation shortcuts", () => {
+  for (const platform of ["MacIntel", "Win32", "Linux"]) {
+    it.each([
+      ["n", "KeyN", "commandPalette.next"],
+      ["p", "KeyP", "commandPalette.previous"],
+    ] as const)(
+      `maps Ctrl+%s only while the palette is open on ${platform}`,
+      (key, code, command) => {
+        const input = event({ key, code, ctrlKey: true });
+        assert.strictEqual(
+          resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, {
+            platform,
+            context: { commandPaletteOpen: true },
+          }),
+          command,
+        );
+        assert.notStrictEqual(
+          resolveShortcutCommand(input, DEFAULT_RESOLVED_KEYBINDINGS, { platform }),
+          command,
+        );
+      },
+    );
+  }
+});

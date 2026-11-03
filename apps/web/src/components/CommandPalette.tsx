@@ -429,6 +429,7 @@ export function CommandPalette({ children }: { children: ReactNode }) {
           previewFocus: isPreviewFocused(),
           previewOpen,
           modelPickerOpen: composerHandleRef.current?.isModelPickerOpen() ?? false,
+          commandPaletteOpen: state.open,
         },
       });
       if (command === "appearance.cycle") {
@@ -490,6 +491,7 @@ export function CommandPalette({ children }: { children: ReactNode }) {
     resolvedTheme,
     setAppearanceMode,
     setOpen,
+    state.open,
     terminalOpen,
     theme,
     themeHalves,
@@ -3131,8 +3133,23 @@ function OpenCommandPaletteDialog(props: {
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
     const command = resolveShortcutCommand(event, keybindings, {
       platform: navigator.platform,
-      context: { modelPickerOpen: false },
+      context: { modelPickerOpen: false, commandPaletteOpen: true },
     });
+    if (command === "commandPalette.next" || command === "commandPalette.previous") {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.nativeEvent.isComposing) return;
+      // Base UI ignores modified keys, so hand it the plain arrow instead.
+      event.currentTarget.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: command === "commandPalette.next" ? "ArrowDown" : "ArrowUp",
+          bubbles: true,
+          cancelable: true,
+          repeat: event.repeat,
+        }),
+      );
+      return;
+    }
     if (threadJumpIndexFromCommand(command ?? "") !== null) {
       event.preventDefault();
       event.stopPropagation();

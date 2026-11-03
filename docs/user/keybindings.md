@@ -34,6 +34,10 @@ the provider list. Use Up/Down to move and Enter to choose. Right returns to
 model search. `mod+shift+up` and `mod+shift+down` switch providers directly and clear the
 search. These provider shortcuts can also be changed in Settings.
 
+In the command palette (`mod+k`), `ctrl+n` and `ctrl+p` move to the next and
+previous result like Down and Up, on every platform. They only apply while the
+palette is open and can be changed in Settings.
+
 These shortcuts run inside the focused web or desktop client. `mod` uses Command
 on macOS and Ctrl on Windows and Linux, including GNOME, KDE Plasma, Niri, and
 Hyprland. If a custom desktop shortcut takes the same keys, choose another binding
@@ -60,7 +64,8 @@ find only searches the files loaded so far.
 With a hardware keyboard, use `Cmd+1` through `Cmd+9` to open the first nine
 displayed threads. The shortcuts follow the current list filters and order.
 `Cmd+K` opens the command palette to search commands, projects, and threads.
-Use the arrow keys and Return to choose a result, or `Cmd+1` through `Cmd+9` to
+Use the arrow keys (or `Ctrl+N` and `Ctrl+P`) and Return to choose a result, or
+`Cmd+1` through `Cmd+9` to
 choose directly. Escape or `Cmd+K` closes the palette. Start a search with `>`
 to show only actions.
 
@@ -104,8 +109,8 @@ Join modifiers and a key with `+`, such as `mod+shift+d` or `ctrl+l`.
 ## When conditions
 
 Available context keys are `terminalFocus`, `terminalOpen`, `previewFocus`,
-`previewOpen`, `modelPickerOpen`, `usagePageOpen`, `composerFocus`, `composerDraft`,
-`turnRunning`, `editableFocus`, `isWeb`, and `isDesktop`.
+`previewOpen`, `modelPickerOpen`, `commandPaletteOpen`, `usagePageOpen`, `composerFocus`,
+`composerDraft`, `turnRunning`, `editableFocus`, `isWeb`, and `isDesktop`.
 `editableFocus` is true while a text field, the composer, or another editor has
 the keyboard. `isWeb` is true in a browser tab. `isDesktop` is true in the
 desktop app. Unknown keys evaluate to `false`.
