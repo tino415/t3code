@@ -41,7 +41,7 @@ beforeEach(() => {
 
 it("does not use another environment's grant or change preferences when denied", async () => {
   state.allowed.add(primary);
-  const open = useOpenInPreferredEditor(secondary, ["vscodium"]);
+  const open = useOpenInPreferredEditor(secondary, ["vscode"]);
   const result = await open("/work/readme.md");
   assert(result._tag === "Failure");
   const error = Cause.squash(result.cause);
@@ -54,16 +54,16 @@ it("does not use another environment's grant or change preferences when denied",
 
 it("checks revocation and regrant when a retained editor callback is invoked", async () => {
   state.allowed.add(secondary);
-  const open = useOpenInPreferredEditor(secondary, ["vscodium"]);
+  const open = useOpenInPreferredEditor(secondary, ["vscode"]);
   state.allowed.delete(secondary);
   expect((await open("/work/readme.md:5"))._tag).toBe("Failure");
   expect(state.run).not.toHaveBeenCalled();
 
   state.allowed.add(secondary);
-  expect(await open("/work/readme.md:5")).toMatchObject({ _tag: "Success", value: "vscodium" });
+  expect(await open("/work/readme.md:5")).toMatchObject({ _tag: "Success", value: "vscode" });
   expect(state.run).toHaveBeenCalledExactlyOnceWith({
     environmentId: secondary,
-    input: { cwd: "/work/readme.md:5", editor: "vscodium" },
+    input: { cwd: "/work/readme.md:5", editor: "vscode" },
   });
   expect(state.setPreference).toHaveBeenCalledTimes(1);
 });

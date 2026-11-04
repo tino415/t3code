@@ -10,6 +10,7 @@ import { isCommandAvailable } from "./shell.ts";
 type Editor = (typeof EDITORS)[number];
 
 const installNames: Partial<Record<Editor["id"], ReadonlyArray<string>>> = {
+  vscode: ["Visual Studio Code"],
   "vscode-insiders": ["Visual Studio Code - Insiders"],
   // `Antigravity.app` is the separate Hub, not the IDE.
   antigravity: ["Antigravity IDE"],
@@ -18,7 +19,7 @@ const installNames: Partial<Record<Editor["id"], ReadonlyArray<string>>> = {
   rider: ["Rider", "JetBrains Rider"],
 };
 
-// Prefix-only matches could let one editor resolve to another's bundle, e.g. IntelliJ IDEA to IntelliJ IDEA Ultimate.
+// Prefix-only matches could select Insiders when resolving stable VS Code.
 const isVersionedBundle = (entry: string, name: string) => {
   if (!entry.startsWith(`${name} `) || !entry.endsWith(".app")) return false;
   return /^\d[\d.]*$/.test(entry.slice(name.length + 1, -".app".length));
@@ -98,7 +99,11 @@ export const resolveEditorCommand = Effect.fn("editor.resolveEditorCommand")(fun
       }
     } else {
       const name =
-        editor.id === "vscode-insiders" ? "Microsoft VS Code Insiders" : editor.label;
+        editor.id === "vscode"
+          ? "Microsoft VS Code"
+          : editor.id === "vscode-insiders"
+            ? "Microsoft VS Code Insiders"
+            : editor.label;
       for (const root of roots) {
         candidates.push(
           path.join(root, name, "resources/app/bin", `${command}.cmd`),

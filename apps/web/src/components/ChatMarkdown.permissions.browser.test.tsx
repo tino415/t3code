@@ -84,8 +84,8 @@ vi.mock(import("../remoteOpen"), async (original) => ({
 }));
 vi.mock(import("../hooks/useLocalStorage"), async (original) => ({
   ...(await original()),
-  useLocalStorage: (() => ["vscodium", vi.fn()]) as never,
-  getLocalStorageItem: (() => "vscodium") as never,
+  useLocalStorage: (() => ["vscode", vi.fn()]) as never,
+  getLocalStorageItem: (() => "vscode") as never,
 }));
 vi.mock(import("../localApi"), async (original) => ({
   ...(await original()),
@@ -119,7 +119,7 @@ const linkedPullRequest: ThreadPullRequestLink = {
   stack: null,
 };
 const serverConfig = {
-  availableEditors: ["vscodium", "file-manager"] as readonly EditorId[],
+  availableEditors: ["vscode", "file-manager"] as readonly EditorId[],
   shellRevealInFileManager: true,
   shellRevealInFileManagerKind: "xdg-open",
   environment: { platform: { os: "linux" }, capabilities: {} },
