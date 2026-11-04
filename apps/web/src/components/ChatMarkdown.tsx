@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "../hooks/useOpenInEditorEnabled";
 import { buildFileLinkParentSuffixByPath, fileLinkLabel } from "@t3tools/shared/fileLinks";
 import {
   isWindowsDrivePathHref,
@@ -626,9 +627,14 @@ function useChatMarkdownState({
       },
     );
   };
-  const { pullRequestsEnabled, availableEditors, revealInFileManagerLabel } = useAtomValue(
-    markdownServerConfigFieldsAtom(environmentId),
-  );
+  const {
+    pullRequestsEnabled,
+    availableEditors: serverAvailableEditors,
+    revealInFileManagerLabel: serverRevealLabel,
+  } = useAtomValue(markdownServerConfigFieldsAtom(environmentId));
+  const openInEditorEnabled = useOpenInEditorEnabled();
+  const availableEditors = openInEditorEnabled ? serverAvailableEditors : NO_MARKDOWN_EDITORS;
+  const revealInFileManagerLabel = openInEditorEnabled ? serverRevealLabel : undefined;
   const projects = useProjects();
   const [preferredEditor] = usePreferredEditor(availableEditors);
   const preferredEditorMenuLabel = openInEditorMenuLabel(preferredEditor);
@@ -857,7 +863,7 @@ function useChatMarkdownState({
         theme={resolvedTheme}
         threadRef={threadRef}
         onOpen={
-          canUseShellActions
+          canUseShellActions && openInEditorEnabled
             ? async () =>
                 openInPreferredEditor(
                   markdownFileEditorTarget(fileLinkMeta, await resolveHostPath()),

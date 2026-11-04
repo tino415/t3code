@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "../hooks/useOpenInEditorEnabled";
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import {
@@ -576,6 +577,8 @@ function TerminalSessionViewport({
     serverConfig?.availableEditors ?? [],
   );
   const openTerminalPath = useEffectEvent((target: string) => openInPreferredEditor(target));
+  const openInEditorEnabled = useOpenInEditorEnabled();
+  const isOpenInEditorEnabled = useEffectEvent(() => openInEditorEnabled);
   const openPreview = useAtomCommand(previewEnvironment.open, {
     reportFailure: false,
   });
@@ -1076,6 +1079,7 @@ function TerminalSessionViewport({
           );
           return;
         }
+        if (!isOpenInEditorEnabled()) return;
         const target = resolvePathLinkTarget(text, cwd);
         void (async () => {
           const result = await openTerminalPath(target);

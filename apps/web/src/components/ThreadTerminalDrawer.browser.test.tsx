@@ -95,6 +95,7 @@ vi.mock("../state/projects", async () => {
     },
   };
 });
+vi.mock("../hooks/useOpenInEditorEnabled", () => ({ useOpenInEditorEnabled: () => true }));
 vi.mock("../editorPreferences", () => ({ useOpenInPreferredEditor: () => () => {} }));
 vi.mock("./preview/openTerminalLinkInPreview", () => ({ openTerminalLinkInPreview: () => {} }));
 vi.mock("~/localApi", () => ({ readLocalApi: () => null }));

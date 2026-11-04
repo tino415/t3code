@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "./hooks/useOpenInEditorEnabled";
 import {
   EDITORS,
   type ContextMenuItem,
@@ -90,11 +91,13 @@ export function useFileContextMenu(environmentId: EnvironmentId | null) {
   const openInEditor = useAtomCommand(shellEnvironment.openInEditor, { reportFailure: false });
   const serverConfig = useAtomValue(serverEnvironment.configValueAtom(environmentId));
 
-  const availableEditors = serverConfig?.availableEditors ?? [];
+  const openInEditorEnabled = useOpenInEditorEnabled();
+  const availableEditors = openInEditorEnabled ? (serverConfig?.availableEditors ?? []) : [];
   const capabilities: FileContextMenuCapabilities = {
     // WSL can reveal in Windows Explorer despite reporting Linux; use server wording.
     revealLabel:
       environmentId !== null &&
+      openInEditorEnabled &&
       serverConfig?.shellRevealInFileManager === true &&
       serverConfig.availableEditors.includes("file-manager")
         ? serverConfig.shellRevealInFileManagerKind === undefined

@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "../hooks/useOpenInEditorEnabled";
 import { ThreadDetailsControl } from "./chat/ThreadDetailsControl";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import {
@@ -950,6 +951,7 @@ export default function GitActionsControl({
     activeEnvironmentId,
     serverConfig?.availableEditors ?? [],
   );
+  const openInEditorEnabled = useOpenInEditorEnabled();
   const threadToastData = activeThreadRef ? { threadRef: activeThreadRef } : undefined;
   const activeServerThreadShell = useQuietThreadShell(activeThreadRef);
   const activeDraftThread = useComposerDraftStore((store) =>
@@ -1747,7 +1749,11 @@ export default function GitActionsControl({
                                 <button
                                   type="button"
                                   className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left enabled:cursor-pointer"
-                                  disabled={!canOperateThread || workingTreeRoot === null}
+                                  disabled={
+                                    !canOperateThread ||
+                                    workingTreeRoot === null ||
+                                    !openInEditorEnabled
+                                  }
                                   aria-label={`Open ${file.path} in editor`}
                                   onClick={() => openChangedFileInEditor(file.path)}
                                 >

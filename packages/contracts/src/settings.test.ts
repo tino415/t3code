@@ -311,6 +311,13 @@ describe("ClientSettings notifications", () => {
   });
 });
 
+describe("ClientSettings open in editor", () => {
+  it("shows Open in entries by default", () => {
+    expect(decodeClientSettings({}).openInEditorEnabled).toBe(true);
+    expect(decodeClientSettingsPatch({})).not.toHaveProperty("openInEditorEnabled");
+  });
+});
+
 describe("ClientSettings quit confirmation", () => {
   it.each([
     [true, "hold"],

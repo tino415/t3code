@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "../hooks/useOpenInEditorEnabled";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { useAtomValue } from "@effect/atom-react";
 import type { FileDiffContentsLoader, FileDiffMetadata } from "@pierre/diffs";
@@ -268,6 +269,7 @@ export default function DiffPanel({
     activeThread?.environmentId ?? null,
     serverConfig?.availableEditors ?? [],
   );
+  const openInEditorEnabled = useOpenInEditorEnabled();
   const getDiffFileContents = useAtomCommand(reviewEnvironment.diffFileContents);
   const gitStatusQuery = useEnvironmentQuery(
     activeThread !== null && activeThread !== undefined && activeCwd != null
@@ -729,6 +731,7 @@ export default function DiffPanel({
       activeCwd,
       repositoryRoot: activeRepositoryRoot,
       openInEditor: (targetPath) => {
+        if (!openInEditorEnabled) return;
         void (async () => {
           const result = await openInPreferredEditor(targetPath);
           if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
