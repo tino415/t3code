@@ -14,6 +14,11 @@ set -euo pipefail
 export VP_BIN_DIR="$HOME/.local/share/vite-plus/bin"
 export VP_DATA_DIR="$HOME/.local/share/vite-plus"
 export VP_CACHE_DIR="$HOME/.cache/vite-plus"
+# ~/.cache arrives root-owned as the parent of the pnpm store mount, and the
+# installer writes VP_CACHE_DIR, so hand it over before installing.
+if [ "$(stat -c %U "$HOME/.cache")" != "$(id -un)" ]; then
+  sudo chown "$(id -un):$(id -gn)" "$HOME/.cache"
+fi
 installer=$(mktemp)
 curl -fsSL https://vite.plus -o "$installer"
 VP_NODE_MANAGER=no bash "$installer"
