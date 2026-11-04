@@ -363,7 +363,7 @@ it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const home = yield* fs.makeTempDirectoryScoped({ prefix: "t3-remote-editors-" });
-      for (const app of ["Cursor", "VSCodium", "WebStorm"]) {
+      for (const app of ["Cursor", "Visual Studio Code", "WebStorm"]) {
         const executable = path.join(
           home,
           "Applications",
@@ -382,7 +382,7 @@ it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
         Effect.provideService(HostProcess.Platform, "darwin"),
       );
       assert.include(editors, "cursor");
-      assert.include(editors, "vscodium");
+      assert.include(editors, "vscode");
       assert.include(editors, "webstorm");
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
