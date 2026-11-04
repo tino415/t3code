@@ -356,6 +356,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["latex tex katex equations formulas markdown"],
   },
   {
+    id: "open-in-editor",
+    title: "Open in editor",
+    to: "/settings/appearance",
+    searchTerms: ["external editor ide vs code cursor zed file manager reveal picker"],
+  },
+  {
     id: "panel-animations",
     title: "Panel animations",
     to: "/settings/appearance",

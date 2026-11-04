@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "../../hooks/useOpenInEditorEnabled";
 import { ProcessSignalActions } from "./ProcessSignalActions";
 import { resolveUsageAccess } from "@t3tools/client-runtime/state/usage-access";
 import { environmentSession } from "../../state/session";
@@ -728,6 +729,7 @@ function DiagnosticsSettingsBody() {
     reportFailure: false,
   });
   const openInEditor = useOpenInPreferredEditor(environmentId, availableEditors ?? []);
+  const openInEditorEnabled = useOpenInEditorEnabled();
   const [resourceWindowMs, setResourceWindowMs] = useState(15 * 60_000);
   const selectedResourceWindow =
     RESOURCE_HISTORY_WINDOWS.find((option) => option.windowMs === resourceWindowMs) ??
@@ -1052,26 +1054,28 @@ function DiagnosticsSettingsBody() {
         headerAction={
           <div className="flex items-center gap-1.5">
             <DiagnosticsLastChecked checkedAt={data?.readAt ?? null} />
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    size="icon-xs"
-                    variant="ghost-muted"
-                    disabled={
-                      !canOpenHostEditor ||
-                      !observability?.logsDirectoryPath ||
-                      isOpeningLogsDirectory
-                    }
-                    onClick={openLogsDirectory}
-                    aria-label="Open logs folder"
-                  >
-                    <FolderOpenIcon />
-                  </Button>
-                }
-              />
-              <TooltipPopup side="top">Open logs folder</TooltipPopup>
-            </Tooltip>
+            {openInEditorEnabled ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      size="icon-xs"
+                      variant="ghost-muted"
+                      disabled={
+                        !canOpenHostEditor ||
+                        !observability?.logsDirectoryPath ||
+                        isOpeningLogsDirectory
+                      }
+                      onClick={openLogsDirectory}
+                      aria-label="Open logs folder"
+                    >
+                      <FolderOpenIcon />
+                    </Button>
+                  }
+                />
+                <TooltipPopup side="top">Open logs folder</TooltipPopup>
+              </Tooltip>
+            ) : null}
             <DiagnosticsRefreshButton
               isPending={isPending}
               label="Refresh trace diagnostics"

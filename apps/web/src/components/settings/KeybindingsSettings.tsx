@@ -1,3 +1,4 @@
+import { useOpenInEditorEnabled } from "../../hooks/useOpenInEditorEnabled";
 import { useEnvironmentScope } from "../../state/session";
 import { useEnvironmentsWithScope, readEnvironmentScope } from "../../state/session";
 import {
@@ -1334,6 +1335,7 @@ export function KeybindingsSettingsPanel() {
     primaryEnvironment?.environmentId ?? null,
     availableEditors,
   );
+  const openInEditorEnabled = useOpenInEditorEnabled();
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [savingCommand, setSavingCommand] = useState<KeybindingCommand | null>(null);
@@ -1483,23 +1485,25 @@ export function KeybindingsSettingsPanel() {
             <PlusIcon aria-hidden className="size-4" />
             Add keybinding
           </Button>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  disabled={!keybindingsConfigPath || !canOpenKeybindingsFile}
-                  onClick={openKeybindingsFile}
-                  aria-label="Open keybindings.json"
-                >
-                  <FileJsonIcon aria-hidden className="size-4" />
-                </Button>
-              }
-            />
-            <TooltipPopup side="top">Open keybindings.json</TooltipPopup>
-          </Tooltip>
+          {openInEditorEnabled ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={!keybindingsConfigPath || !canOpenKeybindingsFile}
+                    onClick={openKeybindingsFile}
+                    aria-label="Open keybindings.json"
+                  >
+                    <FileJsonIcon aria-hidden className="size-4" />
+                  </Button>
+                }
+              />
+              <TooltipPopup side="top">Open keybindings.json</TooltipPopup>
+            </Tooltip>
+          ) : null}
         </div>
       </SettingsSection>
 

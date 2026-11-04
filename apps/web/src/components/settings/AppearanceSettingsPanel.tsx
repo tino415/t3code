@@ -348,6 +348,31 @@ export function AppearanceSettingsPanel() {
             />
           }
         />
+        <SettingsRow
+          {...searchableSetting("open-in-editor")}
+          description="Show Open in entries for external editors and the file manager across chat, files, diffs, and settings."
+          resetAction={
+            settings.openInEditorEnabled !== DEFAULT_UNIFIED_SETTINGS.openInEditorEnabled ? (
+              <SettingResetButton
+                label="open in editor"
+                onClick={() =>
+                  updateSettings({
+                    openInEditorEnabled: DEFAULT_UNIFIED_SETTINGS.openInEditorEnabled,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.openInEditorEnabled}
+              onCheckedChange={(checked) =>
+                updateSettings({ openInEditorEnabled: Boolean(checked) })
+              }
+              aria-label="Open in editor"
+            />
+          }
+        />
         <AdvancedSettings
           targetIds={[
             searchableSetting("panel-animations").id,

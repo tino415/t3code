@@ -81,6 +81,7 @@ vi.mock("~/state/queries", () => ({
   useTurnItemDetail: () => ({ data: null, error: null, isPending: false }),
 }));
 vi.mock("~/state/use-atom-command", () => ({ useAtomCommand: () => async () => {} }));
+vi.mock("~/hooks/useOpenInEditorEnabled", () => ({ useOpenInEditorEnabled: () => true }));
 vi.mock("~/editorPreferences", () => ({ useOpenInPreferredEditor: () => async () => {} }));
 vi.mock("~/fileContextMenu", () => ({ useFileContextMenuHandler: () => () => {} }));
 vi.mock("~/browser/useOpenLink", () => ({ useOpenLink: () => async () => {} }));
