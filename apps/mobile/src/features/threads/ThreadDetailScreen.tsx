@@ -195,6 +195,7 @@ import {
   THREAD_COMPOSER_BOTTOM_GUTTER,
   ThreadComposer,
 } from "./ThreadComposer";
+import { composerFullScreenMaxHeight } from "./composerFullScreenLayout";
 import { ComposerPopoverHost } from "./ComposerPopoverHost";
 import { ThreadFeed, type ThreadFeedHandle, type ThreadFeedHistoryControls } from "./ThreadFeed";
 import { WorkspaceMutationIdProvider } from "./WorkspaceMutationIdProvider";
@@ -1841,6 +1842,13 @@ function ThreadDetailBody(
                               }
                         }
                         bottomInset={composerBottomInset}
+                        fullScreenMaxHeight={composerFullScreenMaxHeight({
+                          screenHeight: screenAreaHeight,
+                          navigationHeaderHeight,
+                          keyboardHeight:
+                            keyboardStickyEnabled && isKeyboardVisible ? liveKeyboardHeight : 0,
+                          composerBottomInset,
+                        })}
                         onChangeDraftMessage={props.onChangeDraftMessage}
                         onPickDraftMedia={props.onPickDraftMedia}
                         onPickDraftFiles={props.onPickDraftFiles}
