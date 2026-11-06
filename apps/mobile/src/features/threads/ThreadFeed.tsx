@@ -206,6 +206,7 @@ import {
   threadFeedRunIsUnsettled,
   isContextCompactionActivityGroup,
   isContextHandoffActivityGroup,
+  isAnsweredQuestionActivityGroup,
   isLinkRequestActivityGroup,
   isSecretRequestActivityGroup,
   type ThreadFeedEntry,
@@ -231,6 +232,7 @@ import {
   ThreadWorkLog,
   WORK_GROUP_TOGGLE_HEIGHT,
 } from "./thread-work-log";
+import { QuestionAnswerBubble } from "./QuestionAnswerHistory";
 import {
   appendGuestPendingMessages,
   appendPendingThreadMessages,
@@ -1837,6 +1839,24 @@ function renderFeedEntry(
         projectedItem={entry.activities[0]!.projectedItem}
         iconColor={iconSubtleColor}
       />
+    );
+  }
+
+  if (entry.type === "activity-group" && isAnsweredQuestionActivityGroup(entry)) {
+    return (
+      <>
+        {entry.activities.map((activity) =>
+          activity.workEntry.questionAnswer ? (
+            <QuestionAnswerBubble
+              key={activity.id}
+              environmentId={props.environmentId}
+              answer={activity.workEntry.questionAnswer}
+              bubbleColor={userBubbleColor}
+              maxWidth={props.duoColumns ? "85%" : props.userBubbleMaxWidth}
+            />
+          ) : null,
+        )}
+      </>
     );
   }
 

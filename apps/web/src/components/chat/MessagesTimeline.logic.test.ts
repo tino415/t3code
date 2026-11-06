@@ -32,6 +32,7 @@ import {
   resolveAssistantMessageCopyState,
   type MessagesTimelineRow,
   workEntryDisplayLabel,
+  answeredQuestionOf,
 } from "./MessagesTimeline.logic";
 
 describe("resolveAssistantMessageCopyState", () => {
@@ -4362,5 +4363,25 @@ describe("shouldCollapseUserMessage", () => {
 
     expect(shouldCollapseUserMessage(`${citation} Can you expand on this?`)).toBe(false);
     expect(shouldCollapseUserMessage(`${citation} ${"More text. ".repeat(60)}`)).toBe(true);
+  });
+});
+
+describe("answeredQuestionOf", () => {
+  const entry = (answers: Record<string, string>) =>
+    ({
+      id: "question",
+      questionAnswer: {
+        requestId: RuntimeRequestId.make("question"),
+        answers,
+        attachmentsByQuestionId: {},
+      },
+    }) as unknown as Parameters<typeof answeredQuestionOf>[0][number];
+
+  it("returns the answer only for a single answered question", () => {
+    const answered = entry({ a: "Blue" });
+    expect(answeredQuestionOf([answered])).toBe(answered.questionAnswer);
+    expect(answeredQuestionOf([entry({})])).toBeNull();
+    expect(answeredQuestionOf([answered, entry({ a: "Red" })])).toBeNull();
+    expect(answeredQuestionOf([])).toBeNull();
   });
 });

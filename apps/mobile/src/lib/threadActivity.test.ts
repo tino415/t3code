@@ -29,6 +29,7 @@ import {
   threadFeedCompactionLabels,
   createThreadFeedCache,
   deriveThreadFeedPresentation,
+  isAnsweredQuestionActivityGroup,
   messageFoldRunId,
   type ThreadFeedCache,
   type ThreadFeedEntry,
@@ -1938,4 +1939,37 @@ it("caps live thought previews while preserving reasoning detail", () => {
   expect(activity.detail).toBe(text);
   expect(JSON.parse(activity.getFullDetail()!).item).toMatchObject({ text });
   expect(activity.getCopyText()).toContain(text);
+});
+
+describe("isAnsweredQuestionActivityGroup", () => {
+  const requestId = RuntimeRequestId.make("question");
+  const activity = (questionAnswer: { answers: Record<string, string> } | undefined) => ({
+    workEntry: {
+      questionAnswer: questionAnswer && {
+        requestId,
+        attachmentsByQuestionId: {},
+        ...questionAnswer,
+      },
+    },
+  });
+  const group = (...activities: ReturnType<typeof activity>[]) =>
+    ({ type: "activity-group", activities }) as unknown as Parameters<
+      typeof isAnsweredQuestionActivityGroup
+    >[0];
+
+  it("uses the bubble only when every activity is an answered question", () => {
+    expect(isAnsweredQuestionActivityGroup(group(activity({ answers: { a: "Blue" } })))).toBe(true);
+    expect(isAnsweredQuestionActivityGroup(group())).toBe(false);
+    expect(isAnsweredQuestionActivityGroup(group(activity({ answers: {} })))).toBe(false);
+    expect(
+      isAnsweredQuestionActivityGroup(
+        group(activity({ answers: { a: "Blue" } }), activity({ answers: {} })),
+      ),
+    ).toBe(false);
+    expect(
+      isAnsweredQuestionActivityGroup(
+        group(activity({ answers: { a: "Blue" } }), activity(undefined)),
+      ),
+    ).toBe(false);
+  });
 });

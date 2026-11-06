@@ -42,3 +42,40 @@ export function hasQuestionAnswer(answer: UserInputAttachmentAnswerPayload): boo
     Object.values(answer.attachmentsByQuestionId).some((attachments) => attachments.length > 0)
   );
 }
+
+export function isAnsweredQuestion(entry: {
+  readonly questionAnswer?: UserInputAttachmentAnswerPayload;
+}): boolean {
+  return entry.questionAnswer !== undefined && hasQuestionAnswer(entry.questionAnswer);
+}
+
+export interface AnsweredQuestionPair {
+  readonly questionId: string;
+  readonly question: string | undefined;
+  readonly answerText: string;
+  readonly attachments: UserInputAttachmentAnswerPayload["attachmentsByQuestionId"][string];
+}
+
+export function answeredQuestionPairs(
+  answer: UserInputAttachmentAnswerPayload,
+): AnsweredQuestionPair[] {
+  return [
+    ...new Set([
+      ...Object.keys(answer.questionTextById ?? {}),
+      ...Object.keys(answer.answers),
+      ...Object.keys(answer.attachmentsByQuestionId),
+    ]),
+  ].flatMap((questionId) => {
+    const answerText = getQuestionAnswerText(answer.answers[questionId]);
+    const attachments = answer.attachmentsByQuestionId[questionId] ?? [];
+    return answerText || attachments.length > 0
+      ? [{ questionId, question: answer.questionTextById?.[questionId], answerText, attachments }]
+      : [];
+  });
+}
+
+export function answeredQuestionCaption(pairs: ReadonlyArray<AnsweredQuestionPair>): string {
+  const [only] = pairs;
+  if (pairs.length !== 1 || !only) return `You answered ${pairs.length} questions`;
+  return only.question ? `You answered · ${only.question}` : "You answered";
+}

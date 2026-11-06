@@ -86,6 +86,7 @@ import {
   timelineTurnFoldRunIdsByEntryId,
   type MessagesTimelineRow,
   type TimelineLatestRun,
+  answeredQuestionOf,
 } from "./MessagesTimeline.logic";
 import { type ThreadFindMatch } from "./threadFind";
 import { useThreadFindNavigation } from "./useThreadFindNavigation";
@@ -109,6 +110,7 @@ import {
   type TimelineRow,
 } from "./timelineRowContext";
 import { TimelineRowTimestamp, ActivityShimmerOverlay } from "./TimelineRowParts";
+import { QuestionAnswerBubble } from "./TimelineWorkEntryRow";
 import {
   WorkGroupSection,
   WorkingTimelineRow,
@@ -1421,13 +1423,15 @@ function getItemType(item: MessagesTimelineRow) {
 }
 
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
+  const answeredQuestion = row.kind === "work" ? answeredQuestionOf(row.groupedEntries) : null;
   const isExpandedToolGroup = row.kind === "work" && row.isExpandedToolGroup;
   const isSubagentGroup = row.kind === "event" && row.projectedItem.item.type === "subagent";
   const isWorkLogRow =
-    row.kind === "work" ||
-    row.kind === "work-live" ||
-    row.kind === "work-toggle" ||
-    row.kind === "thinking";
+    answeredQuestion === null &&
+    (row.kind === "work" ||
+      row.kind === "work-live" ||
+      row.kind === "work-toggle" ||
+      row.kind === "thinking");
   const isExpandedToolGroupHeader =
     (row.kind === "work-toggle" || row.kind === "work-live" || row.kind === "thinking") &&
     row.expanded === true;
@@ -1487,6 +1491,7 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
           {row.kind === "thinking" ? <ThinkingTimelineRow row={row} /> : null}
         </WorkLogBlock>
       ) : null}
+      {answeredQuestion ? <QuestionAnswerBubble answer={answeredQuestion} /> : null}
       {row.kind === "turn-fold" ? <TurnFoldTimelineRow key={row.id} row={row} /> : null}
       {row.kind === "attempt-fold" ? <AttemptFoldTimelineRow row={row} /> : null}
       {row.kind === "context-compaction" ? <ContextCompactionTimelineRow row={row} /> : null}
