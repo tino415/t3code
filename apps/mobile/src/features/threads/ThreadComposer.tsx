@@ -98,6 +98,10 @@ import {
   type ComposerSendPresentation,
 } from "./composerSendPresentation";
 import { compactEditorInsets } from "./compactEditorInsets";
+import {
+  COMPOSER_CORNER_BUTTON_INSET,
+  composerFullScreenEditorHeight,
+} from "./composerFullScreenLayout";
 import { ComposerCommandPopover } from "./ComposerCommandPopover";
 import { ComposerPopoverAnchor } from "./ComposerPopoverAnchor";
 import { ComposerQueuedEditAttachments } from "./ComposerQueuedEdit";
@@ -122,6 +126,7 @@ import {
 } from "./use-thread-settings-sheet-presentation";
 
 export const COMPOSER_COLLAPSED_CHROME = 60;
+const EXPANDED_TOOLBAR_HEIGHT = 52;
 
 const NO_MACHINES: ReadonlyArray<ComposerEnvironmentCandidate> = [];
 const COLLAPSED_EDITOR_DEFAULT_INSET = 6;
@@ -138,7 +143,11 @@ function collapsedEditorInset(text: ScaledTextRole): number {
   return Math.max(0, Math.round(COLLAPSED_EDITOR_DEFAULT_INSET - shift));
 }
 
-function useCompactComposerEditor(text: ScaledTextRole, value: string) {
+function useCompactComposerEditor(
+  text: ScaledTextRole,
+  value: string,
+  fullScreen: { readonly maxHeight: number; readonly chromeHeight: number } | null,
+) {
   const [contentSize, setContentSize] = useState({ width: 0, height: 0 });
   const [compactWidth, setCompactWidth] = useState(0);
   const contentHeight = contentSize.height;
@@ -148,16 +157,21 @@ function useCompactComposerEditor(text: ScaledTextRole, value: string) {
   const inset =
     Platform.OS === "android" ? COLLAPSED_EDITOR_DEFAULT_INSET : collapsedEditorInset(text);
   const minimum = Math.max(INLINE_EDITOR_HEIGHT, Math.ceil(text.lineHeight) + 2 * inset);
-  const height = Math.max(
-    minimum,
-    Math.min(text.lineHeight * 4 + 2 * inset, contentHeight + 2 * inset),
-  );
+  const height =
+    fullScreen === null
+      ? Math.max(minimum, Math.min(text.lineHeight * 4 + 2 * inset, contentHeight + 2 * inset))
+      : composerFullScreenEditorHeight({
+          maxHeight: fullScreen.maxHeight,
+          chromeHeight: fullScreen.chromeHeight + EXPANDED_TOOLBAR_HEIGHT,
+          minimumHeight: minimum,
+        });
   // A line that fits the expanded editor may still overflow its compact slot.
   // Compare its measured width too so widening cannot trigger a collapse loop.
   const isExpanded =
-    value.length > 0 &&
-    (contentHeight > text.lineHeight * 1.5 ||
-      (compactWidth > 0 && contentSize.width > compactWidth));
+    fullScreen !== null ||
+    (value.length > 0 &&
+      (contentHeight > text.lineHeight * 1.5 ||
+        (compactWidth > 0 && contentSize.width > compactWidth)));
   const compactRowHeight = Math.max(44, minimum);
   const isRTL = I18nManager.isRTL;
   const editorStyle = useAnimatedStyle(() => ({
@@ -165,7 +179,7 @@ function useCompactComposerEditor(text: ScaledTextRole, value: string) {
     overflow: "hidden",
     height,
     ...(isExpanded
-      ? { left: 14, right: 14 }
+      ? { left: 14, right: COMPOSER_CORNER_BUTTON_INSET }
       : compactEditorInsets({
           slotX: editorX.value,
           slotWidth: editorWidth.value,
@@ -173,11 +187,11 @@ function useCompactComposerEditor(text: ScaledTextRole, value: string) {
           isRTL,
         })),
     // The full-width editor must move above the controls in the same frame it widens.
-    bottom: isExpanded ? 52 : (compactRowHeight - minimum) / 2,
+    bottom: isExpanded ? EXPANDED_TOOLBAR_HEIGHT : (compactRowHeight - minimum) / 2,
   }));
   return {
     isExpanded,
-    containerStyle: { height: isExpanded ? height + 52 : compactRowHeight },
+    containerStyle: { height: isExpanded ? height + EXPANDED_TOOLBAR_HEIGHT : compactRowHeight },
     editorStyle,
     onRowLayout: (event: { nativeEvent: { layout: { width: number } } }) => {
       rowWidth.set(event.nativeEvent.layout.width);
@@ -210,6 +224,7 @@ export interface ThreadComposerProps {
   readonly contentMaxWidth?: number;
   readonly draftControls?: ReactNode;
   readonly bottomInset?: number;
+  readonly fullScreenMaxHeight?: number;
   readonly connectionState: RemoteClientConnectionState;
   readonly environmentLabel: string | null;
   readonly selectedThread: EnvironmentThreadShell;
@@ -419,6 +434,8 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
   const fallbackInputRef = useRef<ComposerEditorHandle>(null);
   const inputRef = props.editorRef ?? fallbackInputRef;
   const [isFocused, setIsFocused] = useState(false);
+  const [fullScreenDraftKey, setFullScreenDraftKey] = useState<string | null>(null);
+  const [editingAttachmentsHeight, setEditingAttachmentsHeight] = useState(0);
   const pendingPastedTextAttachmentCountRef = useRef(0);
   const pendingNativeImagePasteCountRef = useRef(0);
   const [pendingPastedTextAttachmentCount, setPendingPastedTextAttachmentCount] = useState(0);
@@ -578,7 +595,9 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
     voiceInput.elapsedSeconds,
   );
   const isVoiceInputPresented = voicePresentation.statusKind === "active";
-  const isExpanded = isFocused || settingsSheetPresentation.keepsComposerExpanded;
+  const isFullScreen =
+    fullScreenDraftKey === composerDraftKey && props.fullScreenMaxHeight !== undefined;
+  const isExpanded = isFocused || settingsSheetPresentation.keepsComposerExpanded || isFullScreen;
   const { layout, setComposerEditing } = useAdaptiveWorkspaceLayout();
   const floatingSidebarComposer = useAndroidFloatingTabs() && layout.usesSplitView;
   const usesLargeControls =
@@ -586,7 +605,22 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
   const surfacePaddingVertical = usesLargeControls ? 9 : floatingSidebarComposer ? 6 : 2;
   const [compactRowWidth, setCompactRowWidth] = useState(0);
   const compactAttachmentLimit = compactRowWidth >= 500 ? 3 : 1;
-  const compactEditor = useCompactComposerEditor(bodyText, draftMessage);
+  const compactEditor = useCompactComposerEditor(
+    bodyText,
+    draftMessage,
+    isFullScreen
+      ? {
+          maxHeight: props.fullScreenMaxHeight ?? 0,
+          chromeHeight:
+            6 +
+            (props.bottomInset ?? 0) +
+            THREAD_COMPOSER_BOTTOM_GUTTER +
+            2 * surfacePaddingVertical +
+            editingAttachmentsHeight,
+        }
+      : null,
+  );
+  const showsFullScreenToggle = isExpanded && compactEditor.isExpanded && !isVoiceInputPresented;
   const showsCompactDictation = isVoiceInputPresented;
   const isToolbarVisible = isVoiceInputPresented;
   const hasEditingAttachments =
@@ -696,6 +730,7 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
       return;
     }
     if (sent.value === null) return;
+    setFullScreenDraftKey(null);
     // Arm after send so preference reads and native Activity startup do not delay tap-frame feedback.
     armAgentAwarenessLiveActivityForLocalWork({
       environmentId: props.environmentId,
@@ -886,7 +921,9 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
             error={voiceInput.state.phase === "error" ? voiceInput.state.error : null}
             onDismiss={voiceInput.cancel}
           />
-          {isExpanded ? editingAttachments : null}
+          <View onLayout={(event) => setEditingAttachmentsHeight(event.nativeEvent.layout.height)}>
+            {isExpanded ? editingAttachments : null}
+          </View>
           <View
             onLayout={(event) => {
               compactEditor.onRowLayout(event);
@@ -1192,6 +1229,20 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
               </ComposerToolbarRow>
             </ComposerDictationToolbar>
           </Animated.View>
+          {showsFullScreenToggle ? (
+            <View style={{ position: "absolute", top: 2, right: 2 }}>
+              <ComposerActionButton
+                accessibilityLabel={isFullScreen ? "Exit full screen" : "Edit in full screen"}
+                icon={
+                  isFullScreen
+                    ? "arrow.down.right.and.arrow.up.left"
+                    : "arrow.up.left.and.arrow.down.right"
+                }
+                variant="subtle"
+                onPress={() => setFullScreenDraftKey(isFullScreen ? null : composerDraftKey)}
+              />
+            </View>
+          ) : null}
         </ComposerSurface>
 
         {props.connectionState === "connected" && !props.canOperateThread ? (
