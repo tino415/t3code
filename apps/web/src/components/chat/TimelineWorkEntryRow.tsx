@@ -2,6 +2,8 @@ import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogDetails, WorkLogRow } from "./WorkLog";
 import {
   getQuestionAnswerPreview,
+  answeredQuestionCaption,
+  answeredQuestionPairs,
   getQuestionAnswerText,
   getQuestionTextPreview,
   hasQuestionAnswer,
@@ -9,6 +11,8 @@ import {
 import {
   ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE,
   type EnvironmentId,
+  type UserInputAttachmentAnswerPayload,
+  type UserInputAttachments,
   ThreadId,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
@@ -567,27 +571,62 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
   );
 }
 
-function QuestionAnswerHistory({
-  answer,
+function questionIdsOf(answer: UserInputAttachmentAnswerPayload): string[] {
+  return [
+    ...new Set([
+      ...Object.keys(answer.questionTextById ?? {}),
+      ...Object.keys(answer.answers),
+      ...Object.keys(answer.attachmentsByQuestionId),
+    ]),
+  ];
+}
+
+function QuestionAnswerAttachments({
+  attachments,
 }: {
-  answer: import("@t3tools/contracts").UserInputAttachmentAnswerPayload;
+  attachments: ReadonlyArray<UserInputAttachments[string][number]>;
 }) {
   const { activeThreadEnvironmentId } = use(TimelineRowCtx);
-  const attachments = Object.values(answer.attachmentsByQuestionId).flat();
-  const resources = attachments.map((attachment) => ({
-    _tag: "attachment" as const,
-    attachmentId: attachment.id,
-  }));
-  const urls = useAssetUrls(activeThreadEnvironmentId, resources);
+  const urls = useAssetUrls(
+    activeThreadEnvironmentId,
+    attachments.map((attachment) => ({
+      _tag: "attachment" as const,
+      attachmentId: attachment.id,
+    })),
+  );
+  if (attachments.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {attachments.map((attachment, index) => {
+        const url = urls[index];
+        return (
+          <a
+            key={attachment.id}
+            href={url ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm underline"
+          >
+            {attachment.type === "image" && url ? (
+              <img
+                src={url}
+                alt={attachment.name}
+                className="h-20 max-w-32 rounded object-contain"
+              />
+            ) : (
+              attachment.name
+            )}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuestionAnswerHistory({ answer }: { answer: UserInputAttachmentAnswerPayload }) {
   return (
     <div className="ms-7 mt-2 space-y-2" onClick={stopRowToggle}>
-      {[
-        ...new Set([
-          ...Object.keys(answer.questionTextById ?? {}),
-          ...Object.keys(answer.answers),
-          ...Object.keys(answer.attachmentsByQuestionId),
-        ]),
-      ].map((questionId) => (
+      {questionIdsOf(answer).map((questionId) => (
         <div key={questionId} className="space-y-1">
           {answer.questionTextById?.[questionId] ? (
             <p className="whitespace-pre-wrap text-sm text-muted-foreground">
@@ -599,32 +638,36 @@ function QuestionAnswerHistory({
               {getQuestionAnswerText(answer.answers[questionId])}
             </p>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            {(answer.attachmentsByQuestionId[questionId] ?? []).map((attachment) => {
-              const url = urls[attachments.indexOf(attachment)];
-              return (
-                <a
-                  key={attachment.id}
-                  href={url ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm underline"
-                >
-                  {attachment.type === "image" && url ? (
-                    <img
-                      src={url}
-                      alt={attachment.name}
-                      className="h-20 max-w-32 rounded object-contain"
-                    />
-                  ) : (
-                    attachment.name
-                  )}
-                </a>
-              );
-            })}
-          </div>
+          <QuestionAnswerAttachments
+            attachments={answer.attachmentsByQuestionId[questionId] ?? []}
+          />
         </div>
       ))}
+    </div>
+  );
+}
+
+export function QuestionAnswerBubble({ answer }: { answer: UserInputAttachmentAnswerPayload }) {
+  const pairs = answeredQuestionPairs(answer);
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <p className="max-w-[80%] whitespace-pre-wrap text-xs text-muted-foreground">
+        {answeredQuestionCaption(pairs)}
+      </p>
+      <div className="min-w-0 max-w-[80%] space-y-2 rounded-2xl border-s-2 border-primary bg-message px-4 py-2.5 text-message-foreground">
+        {pairs.map((pair, index) => (
+          <div
+            key={pair.questionId}
+            className={cn("space-y-1", index > 0 && "border-t border-border/60 pt-2")}
+          >
+            {pairs.length > 1 && pair.question ? (
+              <p className="whitespace-pre-wrap text-xs text-muted-foreground">{pair.question}</p>
+            ) : null}
+            {pair.answerText ? <p className="whitespace-pre-wrap">{pair.answerText}</p> : null}
+            <QuestionAnswerAttachments attachments={pair.attachments} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

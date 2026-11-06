@@ -7,6 +7,7 @@ import type { ThreadCheckpointSummary } from "@t3tools/client-runtime/state/thre
 import { formatSubagentDisplayTitle } from "@t3tools/client-runtime/state/subagent-display";
 import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
 import { extractToolActivityPresentation } from "@t3tools/client-runtime/work-log/tool-presentation";
+import { isAnsweredQuestion } from "@t3tools/client-runtime/work-log/user-input";
 import {
   turnItemDetailRevision,
   turnItemHasDetail,
@@ -392,6 +393,13 @@ export function isSecretRequestActivityGroup(entry: ThreadFeedActivityGroup): bo
 export function isLinkRequestActivityGroup(entry: ThreadFeedActivityGroup): boolean {
   return (
     entry.activities.length === 1 && entry.activities[0]?.projectedItem.item.type === "link_request"
+  );
+}
+
+export function isAnsweredQuestionActivityGroup(entry: ThreadFeedActivityGroup): boolean {
+  return (
+    entry.activities.length > 0 &&
+    entry.activities.every((activity) => isAnsweredQuestion(activity.workEntry))
   );
 }
 

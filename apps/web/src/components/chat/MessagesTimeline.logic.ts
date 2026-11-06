@@ -1,6 +1,7 @@
 import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
 import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
+import { isAnsweredQuestion } from "@t3tools/client-runtime/work-log/user-input";
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
 import {
@@ -2566,4 +2567,11 @@ export function sameRowsInput(
     return false;
   }
   return Object.keys(left).length === Object.keys(right).length;
+}
+
+export function answeredQuestionOf(entries: ReadonlyArray<WorkLogEntry>) {
+  const [entry] = entries;
+  return entries.length === 1 && entry && isAnsweredQuestion(entry)
+    ? (entry.questionAnswer ?? null)
+    : null;
 }
