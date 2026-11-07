@@ -7,11 +7,13 @@ import {
   DIALOG_POPUP_CLASS,
 } from "~/components/ui/dialog-styles";
 import { ControlledOpenContext, renderRetainedPopup } from "~/components/ui/dialog";
+import { useCloseOnBackRoot } from "~/components/ui/useCloseOnBackRoot";
 
 function AlertDialog<Payload>(props: AlertDialogPrimitive.Root.Props<Payload>) {
+  const backClose = useCloseOnBackRoot(props);
   return (
     <ControlledOpenContext value={props.open}>
-      <AlertDialogPrimitive.Root {...props} />
+      <AlertDialogPrimitive.Root {...props} {...backClose} />
     </ControlledOpenContext>
   );
 }

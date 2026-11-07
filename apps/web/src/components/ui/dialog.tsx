@@ -11,6 +11,7 @@ import {
   DIALOG_POPUP_CLASS,
 } from "~/components/ui/dialog-styles";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { useCloseOnBackRoot } from "~/components/ui/useCloseOnBackRoot";
 
 const ControlledOpenContext = createContext<boolean | undefined>(undefined);
 
@@ -33,9 +34,10 @@ function renderRetainedPopup(props: ComponentProps<"div">, state: { open: boolea
 }
 
 function Dialog<Payload>(props: DialogPrimitive.Root.Props<Payload>) {
+  const backClose = useCloseOnBackRoot(props);
   return (
     <ControlledOpenContext value={props.open}>
-      <DialogPrimitive.Root {...props} />
+      <DialogPrimitive.Root {...props} {...backClose} />
     </ControlledOpenContext>
   );
 }
