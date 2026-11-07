@@ -4,11 +4,13 @@ import type { CSSProperties } from "react";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { ControlledOpenContext, renderRetainedPopup } from "~/components/ui/dialog";
+import { useCloseOnBackRoot } from "~/components/ui/useCloseOnBackRoot";
 
 function Sheet<Payload>(props: SheetPrimitive.Root.Props<Payload>) {
+  const backClose = useCloseOnBackRoot(props);
   return (
     <ControlledOpenContext value={props.open}>
-      <SheetPrimitive.Root {...props} />
+      <SheetPrimitive.Root {...props} {...backClose} />
     </ControlledOpenContext>
   );
 }
