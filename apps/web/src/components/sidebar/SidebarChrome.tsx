@@ -3,7 +3,9 @@ import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
+import type { ScopedThreadRef } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
+import { useThreadShell } from "../../state/entities";
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { shortcutLabelForCommand } from "../../keybindings";
 import {
@@ -291,9 +293,27 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
   );
 });
 
-export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
+function CurrentThreadName({ threadRef }: { threadRef: ScopedThreadRef | null }) {
+  const title = useThreadShell(threadRef)?.title;
+  if (!title) return null;
+  return (
+    <div
+      className="truncate px-2 pb-1 text-xs font-medium text-sidebar-foreground"
+      data-testid="sidebar-current-thread-name"
+    >
+      {title}
+    </div>
+  );
+}
+
+export const SidebarChromeFooter = memo(function SidebarChromeFooter({
+  currentThreadRef,
+}: {
+  currentThreadRef: ScopedThreadRef | null;
+}) {
   return (
     <SidebarFooter>
+      <CurrentThreadName threadRef={currentThreadRef} />
       <SidebarProviderUpdatePill />
       <SidebarUpdateArchitectureWarning />
       <SidebarUtilityMenu />
