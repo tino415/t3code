@@ -319,7 +319,7 @@ const FEED_REFLOW_SETTLE_MS = 200;
 // across all of them keeps a passing moment off the end from re-anchoring the rest to a row.
 const FEED_REFLOW_HOLD_MS = 600;
 const USER_BUBBLE_HORIZONTAL_PADDING = 3.5 * 3.5;
-const ASSISTANT_ROW_HORIZONTAL_PADDING = 3.5;
+const ASSISTANT_BUBBLE_HORIZONTAL_INSET = 3.5 * 4 + 1;
 
 // Virtualization remounts old rows; only newly created content should replay an entrance.
 const FRESH_ENTRY_WINDOW_MS = 3_000;
@@ -2269,9 +2269,10 @@ function renderFeedEntry(
     return (
       <Animated.View
         className={cn(
+          "rounded-[20px] border border-border bg-card px-3.5 py-2.5",
           showAssistantMeta && !(message.runId && props.failedRunIds.has(message.runId))
-            ? "mb-5 px-1"
-            : "mb-1 px-1",
+            ? "mb-5"
+            : "mb-1",
           hasWideBlock && "w-full",
         )}
         {...(enterAnimated ? { entering: FadeIn.duration(220) } : {})}
@@ -2827,7 +2828,7 @@ export const ThreadFeed = memo(function ThreadFeed({
   });
   const contentWidth = Math.max(0, usableViewportWidth - contentHorizontalPadding * 2);
   const userBubbleMaxWidth = contentWidth * 0.85;
-  const markdownContentWidth = Math.max(0, contentWidth - ASSISTANT_ROW_HORIZONTAL_PADDING * 2);
+  const markdownContentWidth = Math.max(0, contentWidth - ASSISTANT_BUBBLE_HORIZONTAL_INSET * 2);
   const reviewCommentBubbleWidth = Math.min(Math.max(280, contentWidth * 0.85), contentWidth);
   const insets = useSafeAreaInsets();
   const topContentInset = props.contentTopInset ?? insets.top + IOS_NAV_BAR_HEIGHT;
