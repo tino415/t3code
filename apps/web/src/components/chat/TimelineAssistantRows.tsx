@@ -36,7 +36,7 @@ export function AssistantTimelineRow({ row }: { row: Extract<TimelineRow, { kind
 
   return (
     <>
-      <div className="relative min-w-0 px-1 py-0.5">
+      <div className="relative min-w-0 rounded-2xl border border-border bg-card p-3">
         <MessageAuthorHeading>T3 Code</MessageAuthorHeading>
         <div data-thread-find-text="true">
           <AssistantCitationSource
