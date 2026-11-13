@@ -14,6 +14,9 @@ done
 CI=true vp i
 # Repairs electron's path.txt and exec bits after install, same as CI.
 vp run --filter @t3tools/desktop ensure:electron
+# Browser tests (*.browser.test.tsx) and PR screenshots need Playwright's
+# Chromium; --with-deps adds the system libraries it links against.
+(cd apps/web && vp exec playwright install --with-deps chromium)
 # Pre-warms Vite's dep optimizer (cache is keyed on the absolute path, which
 # is stable inside the container).
 node apps/web/scripts/warm-dep-cache.ts
