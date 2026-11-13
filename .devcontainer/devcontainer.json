@@ -35,7 +35,11 @@
     // Scoped by devcontainerId so parallel checkouts do not share it.
     // Codespaces note: prebuild snapshots exclude volumes; drop these mounts
     // if prebuilt codespaces become the primary workflow.
-    "source=t3code-node-modules-${devcontainerId},target=${containerWorkspaceFolder}/node_modules,type=volume"
+    "source=t3code-node-modules-${devcontainerId},target=${containerWorkspaceFolder}/node_modules,type=volume",
+    // A worktree's .git file points at <main checkout>/.git/worktrees/<name>
+    // by absolute host path; binding the main .git at that same path makes
+    // git work there. Assumes the main checkout lives at ~/src/t3code.
+    "source=${localEnv:HOME}/src/t3code/.git,target=${localEnv:HOME}/src/t3code/.git,type=bind"
   ],
   "onCreateCommand": "bash .devcontainer/on-create.sh",
   "updateContentCommand": "bash .devcontainer/update-content.sh",
