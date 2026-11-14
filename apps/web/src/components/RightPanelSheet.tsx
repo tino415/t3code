@@ -22,6 +22,7 @@ export function RightPanelSheet(props: {
         side="right"
         showCloseButton={false}
         keepMounted
+        data-right-panel-sheet=""
         className="w-[min(42vw,28rem)] min-w-80 max-w-[28rem] max-[760px]:w-[min(88vw,24rem)] max-[760px]:min-w-0 wco:mt-(--workspace-topbar-height) wco:h-[calc(100%-var(--workspace-topbar-height))] wco:max-h-[calc(100%-var(--workspace-topbar-height))]"
       >
         {props.children}
