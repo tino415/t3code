@@ -4,9 +4,11 @@ import { useEffect } from "react";
 import { RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY } from "../rightPanelLayout";
 import { selectThreadRightPanelState, useRightPanelStore } from "../rightPanelStore";
 import { resolveThreadRouteRef } from "../threadRoutes";
+import { dispatchPreviewAction } from "./preview/previewActionBus";
 import {
   lockTouchAxis,
   resolvePanelSwipe,
+  TOUCH_PANEL_SWIPE_DISTANCE,
   type PanelSwipeState,
   type TouchAxis,
 } from "./touchPanelSwipe";
@@ -29,10 +31,10 @@ function readRouteThreadRef(router: AnyRouter) {
 function readRightPanel(router: AnyRouter) {
   const ref = readRouteThreadRef(router);
   const sheetLayout = window.matchMedia(RIGHT_PANEL_INLINE_LAYOUT_MEDIA_QUERY).matches;
-  if (!ref || !sheetLayout) return { ref, available: false, open: false };
+  if (!ref || !sheetLayout) return { available: false, open: false };
   const state = selectThreadRightPanelState(useRightPanelStore.getState().byThreadKey, ref);
-  const available = state.maximized !== true;
-  return { ref, available, open: available && state.isOpen };
+  const available = state.maximized !== true && state.surfaces.length > 0;
+  return { available, open: available && state.isOpen };
 }
 
 /** One finger swiping sideways opens or closes the thread list and the right panel sheets. */
@@ -67,7 +69,7 @@ export function TouchPanelSwipe() {
       const deltaX = touch.clientX - gesture.startX;
       const deltaY = touch.clientY - gesture.startY;
       if (gesture.axis === "pending") gesture.axis = lockTouchAxis(gesture.path, deltaX, deltaY);
-      if (gesture.axis !== "horizontal") return;
+      if (gesture.axis !== "horizontal" || Math.abs(deltaX) < TOUCH_PANEL_SWIPE_DISTANCE) return;
 
       const rightPanel = readRightPanel(router);
       const state: PanelSwipeState = {
@@ -81,7 +83,7 @@ export function TouchPanelSwipe() {
       gesture.axis = "done";
       if (action === "openThreads") setOpenMobile(true);
       else if (action === "closeThreads") setOpenMobile(false);
-      else if (rightPanel.ref) useRightPanelStore.getState().toggleVisibility(rightPanel.ref);
+      else dispatchPreviewAction("toggle-right-panel");
     };
 
     const reset = () => {

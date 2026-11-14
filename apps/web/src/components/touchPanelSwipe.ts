@@ -1,6 +1,6 @@
 import { canScrollHorizontally, SWIPE_AXIS_LOCK_DISTANCE } from "./HistorySwipeNavigation";
 
-const TOUCH_PANEL_SWIPE_DISTANCE = 80;
+export const TOUCH_PANEL_SWIPE_DISTANCE = 80;
 
 export type PanelSwipeAction = "openThreads" | "closeThreads" | "toggleRightPanel";
 
