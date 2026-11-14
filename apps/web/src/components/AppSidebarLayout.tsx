@@ -44,6 +44,7 @@ import { SidebarBrandWidthProbe } from "./sidebar/SidebarChrome";
 import { isAppModalPage } from "./sidebar/mainAppLocation";
 import type { SidebarRouteReveal } from "./sidebar/routeReveal";
 import { useSidebarStageBackdropVariant } from "./SidebarStageBackdrop";
+import { TouchPanelSwipe } from "./TouchPanelSwipe";
 import {
   clampThreadSidebarWidth,
   resolveInitialThreadSidebarWidth,
@@ -476,6 +477,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
         <BackgroundThreadAnnouncer />
         <SidebarControl />
         {isElectron ? <HistorySwipeNavigation /> : null}
+        <TouchPanelSwipe />
       </SidebarProvider>
     </PanelAnimationSuppressionProvider>
   );

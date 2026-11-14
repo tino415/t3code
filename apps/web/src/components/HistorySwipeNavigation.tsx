@@ -6,7 +6,7 @@ import { canNavigateHistory, navigateHistory, type HistoryDirection } from "../n
 
 const SWIPE_TRIGGER_DISTANCE = 120;
 // Movement needed before the gesture picks an axis; first events are often diagonal.
-const SWIPE_AXIS_LOCK_DISTANCE = 8;
+export const SWIPE_AXIS_LOCK_DISTANCE = 8;
 const MOMENTUM_SAMPLE_SIZE = 5;
 
 type SwipeBounds = { left: number; top: number; width: number; height: number };
@@ -38,7 +38,7 @@ function readMainContentBounds(): SwipeBounds {
 }
 
 // `event.target` stops at a shadow host; the composed path also reaches scrollers inside it.
-function canScrollHorizontally(path: readonly EventTarget[], deltaX: number): boolean {
+export function canScrollHorizontally(path: readonly EventTarget[], deltaX: number): boolean {
   for (const element of path) {
     if (!(element instanceof Element) || element.scrollWidth <= element.clientWidth) continue;
     const { overflowX } = getComputedStyle(element);
