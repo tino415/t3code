@@ -60,6 +60,14 @@ export type MediaQueryInput = {
   pointer?: "coarse" | "fine";
 };
 
+export function matchesMediaQuery(query: BreakpointQuery | MediaQueryInput): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia(parseQuery(query)).matches
+  );
+}
+
 export function useMediaQuery(query: BreakpointQuery | MediaQueryInput | (string & {})): boolean {
   const mediaQuery = parseQuery(query);
 
