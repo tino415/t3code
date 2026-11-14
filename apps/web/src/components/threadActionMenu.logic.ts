@@ -2,6 +2,7 @@ import type { ContextMenuItem } from "@t3tools/contracts";
 import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
 
 export type ThreadActionMenuId =
+  | "title"
   | "find"
   | "new-thread-on-branch"
   | "filter-by-project"
@@ -70,6 +71,8 @@ export function buildDraftActionMenuItems(options: {
 export interface ThreadActionMenuState {
   readonly canOperate: boolean;
   readonly canFind?: boolean;
+  /** Set where the thread title is truncated on screen, so the menu can show it in full. */
+  readonly titleHeader?: string | null;
   readonly branch: string | null;
   readonly projectFilter: {
     readonly label: string;
@@ -100,6 +103,7 @@ export interface ThreadActionMenuState {
 /** Local navigation, read markers, and copying remain available to read-only clients. */
 export function threadActionRequiresOperate(action: ThreadActionMenuId): boolean {
   return ![
+    "title",
     "find",
     "new-thread-on-branch",
     "project-settings",
@@ -117,6 +121,9 @@ export function buildThreadActionMenuItems(
   state: ThreadActionMenuState,
 ): ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> {
   const items: ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> = [
+    ...(state.titleHeader
+      ? [{ id: "title" as const, label: state.titleHeader, header: true }]
+      : []),
     ...(state.canFind
       ? [{ id: "find" as const, label: "Find in thread", icon: "text-search" }]
       : []),

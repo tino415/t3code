@@ -65,6 +65,16 @@ describe("buildThreadActionMenuItems", () => {
     },
   );
 
+  it("puts the full title first as an enabled header only when asked", () => {
+    const withTitle = buildThreadActionMenuItems({
+      ...baseState,
+      canOperate: false,
+      titleHeader: "workspace:a-long-slug",
+    });
+    expect(withTitle[0]).toEqual({ id: "title", label: "workspace:a-long-slug", header: true });
+    expect(buildThreadActionMenuItems(baseState).some((item) => item.header)).toBe(false);
+  });
+
   it("disables archive and turning into a project while the thread is running", () => {
     const items = buildThreadActionMenuItems({
       ...baseState,

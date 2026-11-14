@@ -126,6 +126,7 @@ import {
   useThreadActions,
 } from "../hooks/useThreadActions";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { matchesMediaQuery } from "../hooks/useMediaQuery";
 import { useOrderWhileOpen } from "../hooks/useOrderWhileOpen";
 import { useProjectPin } from "../hooks/useProjectGroupUpdate";
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
@@ -2626,6 +2627,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 threadRef.environmentId,
                 AuthOrchestrationOperateScope,
               ),
+              titleHeader: matchesMediaQuery("max-sm") ? thread.title : null,
               branch: thread.branch ?? null,
               // An archived project is not a filter choice.
               projectFilter:
