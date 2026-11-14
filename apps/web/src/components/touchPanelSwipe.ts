@@ -20,7 +20,7 @@ export function lockTouchAxis(
 ): TouchAxis {
   if (Math.abs(deltaX) + Math.abs(deltaY) < SWIPE_AXIS_LOCK_DISTANCE) return "pending";
   if (Math.abs(deltaX) <= Math.abs(deltaY)) return "ignored";
-  return canScrollHorizontally(path, deltaX) ? "ignored" : "horizontal";
+  return canScrollHorizontally(path, -deltaX) ? "ignored" : "horizontal";
 }
 
 export function resolvePanelSwipe(deltaX: number, state: PanelSwipeState): PanelSwipeAction | null {

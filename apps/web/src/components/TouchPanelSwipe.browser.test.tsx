@@ -37,7 +37,25 @@ describe("TouchPanelSwipe", () => {
     await expect.element(state).toHaveTextContent("closed");
   });
 
-  it("a swipe over a code block that can still scroll sideways keeps the thread list closed", async () => {
+  it("a swipe over a code block scrolled to its end, dragging it back, keeps the thread list closed", async () => {
+    await using screen = await render(
+      <SidebarProvider>
+        <TouchPanelSwipe />
+        <ThreadListState />
+        <pre style={{ width: 100, overflowX: "auto" }}>
+          <div style={{ width: 500 }}>code</div>
+        </pre>
+      </SidebarProvider>,
+    );
+    const pre = screen.container.querySelector("pre")!;
+    pre.scrollLeft = pre.scrollWidth;
+    swipe(pre, 100, 140, 200);
+    await expect
+      .element(screen.container.querySelector('[data-testid="threads"]')!)
+      .toHaveTextContent("closed");
+  });
+
+  it("a swipe over a code block at its start, dragging toward the exhausted edge, opens the thread list", async () => {
     await using screen = await render(
       <SidebarProvider>
         <TouchPanelSwipe />
@@ -50,7 +68,7 @@ describe("TouchPanelSwipe", () => {
     swipe(screen.container.querySelector("pre")!, 100, 140, 200);
     await expect
       .element(screen.container.querySelector('[data-testid="threads"]')!)
-      .toHaveTextContent("closed");
+      .toHaveTextContent("open");
   });
 
   it("a swipe that stays short of 80px leaves the thread list closed", async () => {
