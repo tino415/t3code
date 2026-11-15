@@ -52,6 +52,20 @@ async function settled(router: AnyRouter, navigation: Promise<void>) {
 }
 
 describe("main app return location", () => {
+  it("closes a modal opened over the thread by stepping back, so Back does not reopen it", async () => {
+    await using screen = await render(<ReturnControls />, { router: THREAD_PATH });
+    const router = screen.router!;
+    using _tracking = { [Symbol.dispose]: startMainAppLocationTracking(router) };
+
+    await settled(router, router.navigate({ href: "/usage" }));
+    const entriesBefore = router.history.length;
+    await userEvent.click(screen.getByRole("button", { name: "Close modal" }));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe(THREAD_PATH));
+    expect(router.history.length).toBe(entriesBefore);
+    router.history.forward();
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe("/usage"));
+  });
+
   it("returns to the thread without re-opening the quote source it was opened at", async () => {
     await using screen = await render(<ReturnControls />, { router: THREAD_PATH });
     const router = screen.router!;

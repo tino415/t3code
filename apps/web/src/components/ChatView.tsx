@@ -309,6 +309,7 @@ import {
 import { QueuedRunsControl, type QueuedRunsControlHandle } from "./chat/QueuedRunsControl";
 import { useThreadLinkedPullRequest } from "./pullRequest/useThreadLinkedPullRequest";
 import { useProactivePanels } from "../hooks/useProactivePanels";
+import { useRightPanelHistory } from "../hooks/useRightPanelHistory";
 import { useIncrementalTimelineEntries } from "../hooks/useIncrementalTimelineEntries";
 import { useRightPanelSurfaceClose } from "../hooks/useRightPanelSurfaceClose";
 import { ComposerBannerStack, type ComposerBannerStackItem } from "./chat/ComposerBannerStack";
@@ -1992,6 +1993,12 @@ export default function ChatView(props: ChatViewProps) {
       )
     : linkedThreadPullRequestKey;
   const activeRunningTurnId = activeRuntime?.activeRunId ?? null;
+  useRightPanelHistory({
+    threadRef: routeThreadRef,
+    projectId: activeThread?.projectId ?? null,
+    sheet: shouldUsePlanSidebarSheet,
+    enabled: routeKind === "server" && !embedded,
+  });
   useProactivePanels({
     threadRef: isServerThread && !embedded ? activeThreadRef : null,
     enabled: settings.proactivePanelsEnabled && !shouldUsePlanSidebarSheet && !embedded,
@@ -2350,6 +2357,7 @@ export default function ChatView(props: ChatViewProps) {
     addPullRequestsSurfaceStable,
     closePreviewPanelStable,
     copyRightPanelFilePathStable,
+    copyRightPanelLinkStable,
     createBrowserSurface,
     createBrowserSurfaceStable,
     moveRightPanelSurfaceStable,
@@ -3984,6 +3992,7 @@ export default function ChatView(props: ChatViewProps) {
           onCloseAllSurfaces={closeAllRightPanelSurfacesStable}
           onMoveSurface={moveRightPanelSurfaceStable}
           onCopyFilePath={copyRightPanelFilePathStable}
+          onCopyLink={copyRightPanelLinkStable}
           onAddBrowser={() => createBrowserSurface()}
           onAddBrowserInProfile={createBrowserSurfaceStable}
           onAddTerminal={addTerminalSurfaceStable}

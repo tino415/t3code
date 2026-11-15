@@ -1,4 +1,9 @@
-import { useNavigate, type AnyRouter } from "@tanstack/react-router";
+import {
+  useNavigate,
+  useRouter,
+  type AnyRouter,
+  type HistoryLocation,
+} from "@tanstack/react-router";
 
 import { GUEST_PAGE_PATH } from "../../guestPage";
 import { withoutAssistantCitationHash } from "../../lib/assistantCitationNavigation";
@@ -19,6 +24,12 @@ const SHELL_LESS_PATHS = new Set(["/pair", "/connect", "/connect-agent", GUEST_P
 
 let mainAppHref: string | null = null;
 let appModalReturnHref: string | null = null;
+let appModalReturnIndex: number | null = null;
+
+const historyIndex = (location: HistoryLocation): number | null => {
+  const index: unknown = Reflect.get(location.state, "__TSR_index");
+  return typeof index === "number" ? index : null;
+};
 
 /** Remembers where Settings, Usage, and the utility pages lead back to. */
 export function startMainAppLocationTracking(router: AnyRouter): () => void {
@@ -27,6 +38,8 @@ export function startMainAppLocationTracking(router: AnyRouter): () => void {
     if (isAppModalPage(pathname) || SHELL_LESS_PATHS.has(pathname)) return;
     const href = withoutAssistantCitationHash(router.state.location.href);
     appModalReturnHref = href;
+    appModalReturnIndex =
+      href === router.state.location.href ? historyIndex(router.history.location) : null;
     if (!isSidebarUtilityPage(pathname)) mainAppHref = href;
   };
   record();
@@ -38,8 +51,19 @@ export function useNavigateToMainApp() {
   return () => navigate({ href: mainAppHref ?? "/" });
 }
 
-/** Leaves Settings or Usage for the page that opened it. */
+/**
+ * Leaves Settings or Usage for the page that opened it. When that page is still behind in
+ * history the modal steps back to it, so Back does not reopen the modal.
+ */
 export function useCloseAppModal() {
   const navigate = useNavigate();
-  return () => navigate({ href: appModalReturnHref ?? mainAppHref ?? "/" });
+  const router = useRouter();
+  return async () => {
+    const index = historyIndex(router.history.location);
+    if (appModalReturnIndex !== null && index !== null && index > appModalReturnIndex) {
+      router.history.go(appModalReturnIndex - index);
+      return;
+    }
+    await navigate({ href: appModalReturnHref ?? mainAppHref ?? "/", replace: true });
+  };
 }

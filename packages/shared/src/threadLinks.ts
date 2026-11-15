@@ -9,6 +9,7 @@ const V1_PREFIX = `${THREAD_LINK_PROTOCOL}://v1/`;
 const V2_PREFIX = `${THREAD_LINK_PROTOCOL}://v2/`;
 const HOSTED_PREFIX = `${DEFAULT_HOSTED_APP_URL}/threads/`;
 const HOSTED_SEGMENT = "[A-Za-z0-9_%-]+";
+const PANEL_QUERY_KEYS = ["panel", "tab", "line", "turn"] as const;
 const HOSTED_LINK = `${HOSTED_PREFIX.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}${HOSTED_SEGMENT}/${HOSTED_SEGMENT}`;
 // Code comes first in the alternation so a link written inside a code span or fence is skipped.
 const THREAD_LINK_OUTSIDE_CODE = new RegExp(
@@ -32,10 +33,23 @@ const hostedSegment = (id: string) =>
     (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 
-/** Opens the thread from anywhere: the hosted app offers the desktop app, the mobile app, or itself. */
-export function hostedThreadLink(ref: ScopedThreadRef, origin = DEFAULT_HOSTED_APP_URL): string {
+/**
+ * Opens the thread from anywhere: the hosted app offers the desktop app, the mobile app, or
+ * itself. A `panel` search opens that right panel tab where the web or desktop app lands.
+ */
+export function hostedThreadLink(
+  ref: ScopedThreadRef,
+  origin = DEFAULT_HOSTED_APP_URL,
+  panel?: Readonly<{ panel?: string; tab?: string; line?: number; turn?: string }>,
+): string {
   const path = `/threads/${hostedSegment(ref.environmentId)}/${hostedSegment(ref.threadId)}`;
-  return new URL(path, origin).toString();
+  const url = new URL(path, origin);
+  if (panel?.panel === undefined) return url.toString();
+  for (const key of PANEL_QUERY_KEYS) {
+    const value = panel?.[key];
+    if (value !== undefined) url.searchParams.set(key, String(value));
+  }
+  return url.toString();
 }
 
 const HOSTED_PATH = new RegExp(`^(${HOSTED_SEGMENT})/(${HOSTED_SEGMENT})$`);
