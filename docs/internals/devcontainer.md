@@ -15,7 +15,11 @@
 
 ## Caching
 
-Two named volumes keep rebuilds fast and installs off the slow macOS/Windows bind mount: the pnpm store (shared across checkouts, mounted where `vp i` keeps it) and root `node_modules` (per-container, which covers the whole `.pnpm` virtual store since workspace packages just symlink into it). Deleting a container and recreating it reuses both, so a rebuild's `vp i` is seconds, not minutes. The host sees an empty `node_modules`; run host-side tooling inside the container.
+Three named volumes keep rebuilds fast and installs off the slow macOS/Windows bind mount: the pnpm store (shared across checkouts, mounted where `vp i` keeps it), Playwright's Chromium download (also shared across checkouts), and root `node_modules` (per-container, which covers the whole `.pnpm` virtual store since workspace packages just symlink into it). Deleting a container and recreating it reuses all three, so a rebuild's `vp i` is seconds, not minutes. The host sees an empty `node_modules`; run host-side tooling inside the container.
+
+## Interrupted creation
+
+The Dev Container CLI records that `updateContentCommand` ran before it finishes, so a first `up` that was cut off never reruns it and looks healthy while missing whatever the script had not reached. Finish it with `bash .devcontainer/update-content.sh` inside the container; the script is idempotent. The Chromium install is the last step and only warns on failure, so an outage there does not fail creation; rerun the same script to retry it.
 
 ## Out of scope
 
