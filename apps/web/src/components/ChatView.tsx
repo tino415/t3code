@@ -2702,6 +2702,7 @@ export default function ChatView(props: ChatViewProps) {
       closeThreadFind();
       focusComposerStable();
     },
+    stopRun: canInterruptRunningThread ? () => void onInterruptStable() : null,
     commands: {
       ...terminalShortcuts,
       ...rightPanelShortcuts,
