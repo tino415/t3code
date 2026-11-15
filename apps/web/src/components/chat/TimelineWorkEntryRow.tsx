@@ -654,7 +654,7 @@ export function QuestionAnswerBubble({ answer }: { answer: UserInputAttachmentAn
       <p className="max-w-[80%] whitespace-pre-wrap text-xs text-muted-foreground">
         {answeredQuestionCaption(pairs)}
       </p>
-      <div className="min-w-0 max-w-[80%] space-y-2 rounded-2xl border-s-2 border-primary bg-message px-4 py-2.5 text-message-foreground">
+      <div className="min-w-0 max-w-[80%] space-y-2 rounded-2xl border-s-2 border-primary bg-message px-4 py-2.5 text-sm text-message-foreground">
         {pairs.map((pair, index) => (
           <div
             key={pair.questionId}
