@@ -47,7 +47,11 @@ function Launcher(props: { keys: string; received: string[] }) {
 
 // The chat's shortcut listener registers when the chat mounts, so a launcher that opens
 // later registers after it. Tests mount the chat first and add the launcher by rerendering.
-function Chat(props: { composerKeys: string[]; launcher?: { keys: string; received: string[] } }) {
+function Chat(props: {
+  composerKeys: string[];
+  launcher?: { keys: string; received: string[] };
+  stopRun?: () => void;
+}) {
   useChatShortcuts({
     enabled: true,
     keybindings: [],
@@ -65,6 +69,7 @@ function Chat(props: { composerKeys: string[]; launcher?: { keys: string; receiv
     },
     branchToolbarRef: { current: null },
     closeThreadFind: () => {},
+    stopRun: props.stopRun ?? null,
     commands: {},
     fallback: () => undefined,
   });
@@ -132,6 +137,40 @@ it.each([
 
   expect(composerKeys).toEqual(composer);
   expect(received).toEqual(launcher);
+});
+
+it("stops the run on a second Escape, not on one, and not on one a menu consumed", async () => {
+  let stops = 0;
+  const stopRun = () => void stops++;
+  await using _screen = await render(<Chat composerKeys={[]} stopRun={stopRun} />, options);
+
+  await userEvent.keyboard("{Escape}");
+  expect(stops).toBe(0);
+  await userEvent.keyboard("{Escape}");
+  expect(stops).toBe(1);
+
+  const consumeEscape = (event: KeyboardEvent) => event.preventDefault();
+  window.addEventListener("keydown", consumeEscape, true);
+  await userEvent.keyboard("{Escape}{Escape}");
+  window.removeEventListener("keydown", consumeEscape, true);
+  expect(stops).toBe(1);
+});
+
+it("stops the run on a double Escape typed in the composer, where ProseMirror prevents Escape", async () => {
+  let stops = 0;
+  const stopRun = () => void stops++;
+  await using _screen = await render(<Chat composerKeys={[]} stopRun={stopRun} />, options);
+  const editor = document.createElement("div");
+  editor.className = "ProseMirror";
+  editor.tabIndex = 0;
+  editor.addEventListener("keydown", (event) => event.preventDefault());
+  document.body.append(editor);
+  using _editor = { [Symbol.dispose]: () => editor.remove() };
+  editor.focus();
+
+  await userEvent.keyboard("{Escape}{Escape}");
+
+  expect(stops).toBe(1);
 });
 
 const ctrlShift = (key: string, command: KeybindingCommand) => ({

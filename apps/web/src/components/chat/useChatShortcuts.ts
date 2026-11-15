@@ -11,8 +11,21 @@ import { isInSideChatPane } from "../../lib/sideChatPane";
 import { getTerminalFocusOwner, type TerminalFocusOwner } from "../../lib/terminalFocus";
 import type { ComposerHandleRef } from "../../composerHandleContext";
 import type { BranchToolbarHandle } from "../BranchToolbar";
-import { shouldTypeToFocusComposer } from "./composerFocusRedirect";
+import {
+  shouldTypeToFocusComposer,
+  TYPE_TO_FOCUS_FLOATING_LAYER_SELECTOR,
+} from "./composerFocusRedirect";
 import { composerShortcutCommands } from "./composerShortcuts";
+import { disarmEscapeToStop, pressEscapeToStop } from "./doubleEscapeStop";
+
+// ProseMirror marks every Escape it sees as handled, so only a stopped event shows the composer's menu took it.
+function isInRichTextEditor(target: EventTarget | null) {
+  return target instanceof Element && target.closest(".ProseMirror") !== null;
+}
+
+function isTextFieldOutsideComposer(target: EventTarget | null) {
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+}
 
 /** Returning false lets the key event through untouched. */
 type ChatShortcutHandler = (context: {
@@ -40,6 +53,7 @@ interface ChatShortcutsInput {
   readonly composerRef: ComposerHandleRef;
   readonly branchToolbarRef: { readonly current: BranchToolbarHandle | null };
   readonly closeThreadFind: () => void;
+  readonly stopRun: (() => void) | null;
   readonly commands: ChatShortcutCommands;
   /** Handles commands not in `commands`, such as project scripts. */
   readonly fallback: (command: KeybindingCommand) => ChatShortcutHandler | undefined;
@@ -108,6 +122,34 @@ export function useChatShortcuts(input: ChatShortcutsInput) {
     event.preventDefault();
     input.closeThreadFind();
   });
+  const stopOnDoubleEscape = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key !== "Escape") {
+      disarmEscapeToStop();
+      return;
+    }
+    if (
+      !input.stopRun ||
+      !input.enabled ||
+      input.threadFindActive ||
+      (event.defaultPrevented && !isInRichTextEditor(event.target)) ||
+      event.repeat ||
+      event.isComposing ||
+      event.keyCode === 229 ||
+      isCommandPaletteOpen() ||
+      isInSideChatPane(event.target) ||
+      isTextFieldOutsideComposer(event.target) ||
+      document.querySelector(TYPE_TO_FOCUS_FLOATING_LAYER_SELECTOR) !== null
+    ) {
+      disarmEscapeToStop();
+      return;
+    }
+    const context = input.getShortcutContext(event.target);
+    if (context.terminalFocus || context.previewFocus || context.modelPickerOpen) {
+      disarmEscapeToStop();
+      return;
+    }
+    pressEscapeToStop(input.stopRun);
+  });
   const handleComposerShortcut = useEffectEvent((event: KeyboardEvent) => {
     if (event.defaultPrevented || isCommandPaletteOpen()) return;
     const command = resolveChatShortcutCommand(event, input.keybindings, input.scriptKeybindings, {
@@ -129,7 +171,10 @@ export function useChatShortcuts(input: ChatShortcutsInput) {
       return () => composerElement.removeEventListener("keydown", onComposerKeyDown, true);
     }
     const onKeyDownCapture = (event: KeyboardEvent) => handleShortcut(event);
-    const onKeyDown = (event: KeyboardEvent) => dismissFind(event);
+    const onKeyDown = (event: KeyboardEvent) => {
+      dismissFind(event);
+      stopOnDoubleEscape(event);
+    };
     window.addEventListener("keydown", onKeyDownCapture, true);
     window.addEventListener("keydown", onKeyDown);
     return () => {
