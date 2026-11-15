@@ -3644,7 +3644,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           ) : null}
         </SidebarGroup>
       </SidebarContent>
-      <SidebarChromeFooter currentThreadRef={routeThreadRef} />
+      <SidebarChromeFooter />
     </>
   );
 }
