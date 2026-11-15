@@ -88,11 +88,20 @@ export function deriveBlockedOnThreadWait(input: {
 
 const PULL_REQUEST_WATCH_TASK_PREFIX = "pull-request-watch:";
 
-// Settling ends pull request watches itself, so only the tasks of the provider session are lost.
+// Settling ends pull request watches itself, so only the awaited tasks of the provider session
+// are lost.
 export function backgroundWorkLostBySettling<
-  Task extends Pick<PendingBackgroundWorkTask, "taskId">,
+  Task extends Pick<PendingBackgroundWorkTask, "taskId" | "kind" | "awaited">,
 >(tasks: ReadonlyArray<Task>): ReadonlyArray<Task> {
-  return tasks.filter((task) => !task.taskId.startsWith(PULL_REQUEST_WATCH_TASK_PREFIX));
+  return tasks.filter(
+    (task) =>
+      !task.taskId.startsWith(PULL_REQUEST_WATCH_TASK_PREFIX) &&
+      backgroundWorkHoldsCompletion([task]),
+  );
+}
+
+export function countBackgroundTasks(count: number): string {
+  return `${count} background ${count === 1 ? "task" : "tasks"}`;
 }
 
 export function backgroundWorkHoldsCompletion(

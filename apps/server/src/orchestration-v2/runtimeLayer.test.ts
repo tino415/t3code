@@ -4658,7 +4658,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
       assert.equal(error._tag, "OrchestratorDispatchError");
       assert.equal(
         error.cause,
-        `Thread ${threadId} is waiting on 1 background tasks. Stop them or confirm settling.`,
+        `Thread ${threadId} is waiting on 1 background task. Stop them or confirm settling.`,
       );
       assert.isNull((yield* orchestrator.getThreadProjection(threadId)).thread.settledOverride);
 

@@ -266,7 +266,7 @@ describe("settle and snooze Undo", () => {
     confirm.mockResolvedValueOnce(false);
     await actions.settleThread(target);
     expect(confirm).toHaveBeenCalledExactlyOnceWith(
-      "Still waiting on 1 background tasks. Settle and stop them?",
+      "Still waiting on 1 background task. Settle and stop them?",
     );
     expect(commands.settle).not.toHaveBeenCalled();
 

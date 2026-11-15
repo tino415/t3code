@@ -81,6 +81,7 @@ import { recordThreadOpen } from "@t3tools/shared/paletteSearch";
 import {
   backgroundWorkHoldsCompletion,
   backgroundWorkLostBySettling,
+  countBackgroundTasks,
   derivePendingBackgroundWork,
   pendingBackgroundTurnItems,
 } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
@@ -3379,9 +3380,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           ? "is still running. Stop it before settling."
           : queuedMessageExists
             ? "has a queued message. Send it or remove it from the queue before settling."
-            : command.stopBackgroundWork !== true &&
-                backgroundWorkHoldsCompletion(pendingBackgroundTasks)
-              ? `is waiting on ${pendingBackgroundTasks.length} background tasks. Stop them or confirm settling.`
+            : command.stopBackgroundWork !== true && pendingBackgroundTasks.length > 0
+              ? `is waiting on ${countBackgroundTasks(pendingBackgroundTasks.length)}. Stop them or confirm settling.`
               : null;
       if (blocker !== null) {
         return yield* new OrchestratorDispatchError({

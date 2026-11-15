@@ -17,8 +17,8 @@ import {
   sessionGrantsScope,
 } from "@t3tools/contracts";
 import {
-  backgroundWorkHoldsCompletion,
   backgroundWorkLostBySettling,
+  countBackgroundTasks,
 } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
 import { resolveWorktreeCleanup } from "@t3tools/shared/projectSettings";
 import * as Cause from "effect/Cause";
@@ -762,13 +762,13 @@ export function useThreadActions() {
     const pendingBackgroundTasks = backgroundWorkLostBySettling(
       resolved?.thread.pendingBackgroundTasks ?? [],
     );
-    const stopBackgroundWork = backgroundWorkHoldsCompletion(pendingBackgroundTasks);
+    const stopBackgroundWork = pendingBackgroundTasks.length > 0;
     if (stopBackgroundWork) {
       const localApi = readLocalApi();
       const confirmationResult = await settlePromise(() =>
         localApi
           ? localApi.dialogs.confirm(
-              `Still waiting on ${pendingBackgroundTasks.length} background tasks. Settle and stop them?`,
+              `Still waiting on ${countBackgroundTasks(pendingBackgroundTasks.length)}. Settle and stop them?`,
             )
           : Promise.resolve(false),
       );
