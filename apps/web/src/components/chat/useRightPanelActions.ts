@@ -12,7 +12,10 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
-import { useDiffPanelStore } from "../../diffPanelStore";
+import { selectThreadDiffPanelSelection, useDiffPanelStore } from "../../diffPanelStore";
+import { configuredHostedAppUrl } from "../../hostedPairing";
+import { rightPanelSearchOfSurface } from "../../rightPanelSearch";
+import { hostedThreadLink } from "@t3tools/shared/threadLinks";
 import { type ThreadPanelPresentation } from "../../rightPanelLayout";
 import {
   selectActiveRightPanel,
@@ -291,6 +294,30 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     );
   };
   const copyRightPanelFilePathStable = useStableCallback(copyRightPanelFilePath);
+  const copyRightPanelLink = (surface: RightPanelSurface) => {
+    if (activeThreadRef === null || !navigator.clipboard?.writeText) return;
+    const selection = selectThreadDiffPanelSelection(
+      useDiffPanelStore.getState().byThreadKey,
+      activeThreadRef,
+    );
+    const panel = rightPanelSearchOfSurface(
+      surface,
+      selection.kind === "turn" ? selection.turnId : null,
+    );
+    const link = hostedThreadLink(activeThreadRef, configuredHostedAppUrl(), panel);
+    void navigator.clipboard.writeText(link).then(
+      () => toastManager.add({ type: "success", title: "Link copied", description: link }),
+      (error) =>
+        toastManager.add(
+          stackedThreadToast({
+            type: "error",
+            title: "Failed to copy link",
+            description: error instanceof Error ? error.message : "An error occurred.",
+          }),
+        ),
+    );
+  };
+  const copyRightPanelLinkStable = useStableCallback(copyRightPanelLink);
   const addPullRequestSurface = () => {
     if (!supportsPullRequests || activeThreadRef === null || pullRequestPanelTarget === null)
       return;
@@ -351,6 +378,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     addPullRequestsSurfaceStable,
     closePreviewPanelStable,
     copyRightPanelFilePathStable,
+    copyRightPanelLinkStable,
     createBrowserSurface,
     createBrowserSurfaceStable,
     moveRightPanelSurfaceStable,

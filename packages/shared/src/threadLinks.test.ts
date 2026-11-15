@@ -188,11 +188,22 @@ describe("hosted thread links", () => {
     );
   });
 
+  it("carries a panel search only with a panel", () => {
+    const thread = ref("env-1", "thread-1");
+    expect(hostedThreadLink(thread, undefined, { panel: "file:a/b.ts", line: 40 })).toBe(
+      "https://app.t3.codes/threads/env-1/thread-1?panel=file%3Aa%2Fb.ts&line=40",
+    );
+    expect(hostedThreadLink(thread, undefined, { tab: "code" })).toBe(hostedThreadLink(thread));
+  });
+
   it("reads only a bare thread path on the hosted app", () => {
     expect(parseThreadLinkHref("https://app.t3.codes/threads/env-1/thread-1")).toEqual(
       ref("env-1", "thread-1"),
     );
     expect(parseThreadLinkHref("https://app.t3.codes/threads/env-1/thread-1?prompt=go")).toBeNull();
+    expect(
+      parseThreadLinkHref("https://app.t3.codes/threads/env-1/thread-1?panel=diff"),
+    ).toBeNull();
     expect(parseThreadLinkHref("https://app.t3.codes/threads/env-1/thread-1/extra")).toBeNull();
     expect(parseThreadLinkHref("https://app.t3.codes/threads/env-1")).toBeNull();
     expect(parseThreadLinkHref("https://app.t3.codes/env-1/thread-1")).toBeNull();

@@ -61,6 +61,7 @@ import {
 
 import { isElectron } from "~/env";
 import type { DesktopPreviewOverlay } from "~/previewStateStore";
+import { rightPanelSearchOfSurface } from "~/rightPanelSearch";
 import type { RightPanelSurface } from "~/rightPanelStore";
 import { cn } from "~/lib/utils";
 import { resolveShortcutCommand, type ShortcutMatchContext } from "~/keybindings";
@@ -132,6 +133,7 @@ export interface RightPanelTabsProps {
   onCloseAllSurfaces: () => void;
   onMoveSurface?: (surfaceId: string, toIndex: number) => void;
   onCopyFilePath: (relativePath: string) => void;
+  onCopyLink?: (surface: RightPanelSurface) => void;
   onAddBrowser: () => void;
   /** Keep separate from the DOM click handler so a MouseEvent cannot become a profile id. */
   onAddBrowserInProfile: (profileId: string) => void;
@@ -210,6 +212,7 @@ const SURFACE_UNAVAILABLE_HINTS = {
 type TabContextMenuAction =
   | "rename"
   | "copy-path"
+  | "copy-link"
   | "toggle-mute"
   | "close"
   | "close-others"
@@ -1186,6 +1189,9 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
     if (surface.kind === "file" && surface.attachment === undefined) {
       items.push({ id: "copy-path", label: "Copy path" });
     }
+    if (props.onCopyLink && rightPanelSearchOfSurface(surface).panel !== undefined) {
+      items.push({ id: "copy-link", label: "Copy link" });
+    }
     const menuPreviewTabId = previewTabIdOf(surface, props.previewSessions);
     const menuOverlay = menuPreviewTabId ? (props.desktopByTabId[menuPreviewTabId] ?? null) : null;
     const menuMuted = menuOverlay?.audioMuted ?? false;
@@ -1226,6 +1232,9 @@ export function RightPanelTabs(props: RightPanelTabsProps) {
         if (surface.kind === "file" && surface.attachment === undefined) {
           props.onCopyFilePath(surface.relativePath);
         }
+        break;
+      case "copy-link":
+        props.onCopyLink?.(surface);
         break;
       case "toggle-mute": {
         const runtimeTabId =
