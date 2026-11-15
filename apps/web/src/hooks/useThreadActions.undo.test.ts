@@ -45,7 +45,10 @@ vi.mock("../lib/composerDraftUploads", () => ({ releaseComposerDraftUploads: vi.
 vi.mock("../terminalUiStateStore", () => ({ useTerminalUiStateStore: () => vi.fn() }));
 vi.mock("../uiStateStore", () => ({ useUiStateStore: () => vi.fn() }));
 vi.mock("../lib/archivedThreadsState", () => ({ refreshArchivedThreadsForEnvironment: vi.fn() }));
+const confirm = vi.hoisted(() => vi.fn());
+vi.mock("../localApi", () => ({ readLocalApi: () => ({ dialogs: { confirm } }) }));
 const threadShell = vi.hoisted(() => ({
+  pendingBackgroundTasks: [] as Array<{ taskId: string; description: string; kind: "monitor" }>,
   title: "Thread",
   pinOrderKey: "a0",
   pinnedAt: null as string | null,
@@ -108,6 +111,8 @@ beforeEach(() => {
   router.state.matches[0]!.params = {};
   threadShell.pinnedAt = null;
   threadShell.snoozedUntil = null;
+  threadShell.pendingBackgroundTasks = [];
+  confirm.mockReset().mockResolvedValue(true);
   shellLoaded.current = true;
 });
 afterEach(() => {
@@ -250,6 +255,26 @@ describe("settle and snooze Undo", () => {
     await actions.unsettleThread(target);
     await undo();
     expect(commands.unsettle).toHaveBeenCalledOnce();
+  });
+
+  it("asks before settling a thread waiting on a background task, and stops it only on yes", async () => {
+    threadShell.pendingBackgroundTasks = [
+      { taskId: "bg-1", description: "Watch build", kind: "monitor", awaited: true } as never,
+    ];
+    const actions = useThreadActions();
+
+    confirm.mockResolvedValueOnce(false);
+    await actions.settleThread(target);
+    expect(confirm).toHaveBeenCalledExactlyOnceWith(
+      "Still waiting on 1 background tasks. Settle and stop them?",
+    );
+    expect(commands.settle).not.toHaveBeenCalled();
+
+    await actions.settleThread(target);
+    expect(commands.settle).toHaveBeenCalledExactlyOnceWith({
+      environmentId: target.environmentId,
+      input: { threadId: target.threadId, stopBackgroundWork: true },
+    });
   });
 
   it("re-pins and re-snoozes a thread that settling had cleared", async () => {
