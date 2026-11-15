@@ -18,7 +18,6 @@ vp run --filter @t3tools/desktop ensure:electron
 # is stable inside the container).
 node apps/web/scripts/warm-dep-cache.ts
 # Last and non-fatal: only browser tests (*.browser.test.tsx) and PR screenshots
-# need Playwright's Chromium, and a CDN or apt outage must not fail creation.
-# --with-deps adds the system libraries it links against.
+# need Chromium. --with-deps adds the system libraries it links against.
 (cd apps/web && vp exec playwright install --with-deps chromium) ||
   echo "WARNING: Chromium install failed; rerun: (cd apps/web && vp exec playwright install --with-deps chromium)"

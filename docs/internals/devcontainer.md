@@ -15,7 +15,7 @@
 
 ## Caching
 
-Three named volumes keep rebuilds fast and installs off the slow macOS/Windows bind mount: the pnpm store (shared across checkouts, mounted where `vp i` keeps it), Playwright's Chromium download (also shared across checkouts), and root `node_modules` (per-container, which covers the whole `.pnpm` virtual store since workspace packages just symlink into it). Deleting a container and recreating it reuses all three, so a rebuild's `vp i` is seconds, not minutes. The host sees an empty `node_modules`; run host-side tooling inside the container.
+Three named volumes keep rebuilds fast and installs off the slow macOS/Windows bind mount: the pnpm store (shared across checkouts, mounted where `vp i` keeps it), Playwright's Chromium download (also shared across checkouts), and root `node_modules` (per-container, which covers the whole `.pnpm` virtual store since workspace packages just symlink into it). Deleting a container and recreating it reuses all three, so a rebuild's `vp i` is seconds, not minutes and the Chromium download is skipped (the system libraries `--with-deps` adds live in the container image layer, not the volume). The host sees an empty `node_modules`; run host-side tooling inside the container.
 
 ## Interrupted creation
 
