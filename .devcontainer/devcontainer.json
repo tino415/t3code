@@ -30,6 +30,8 @@
     // ~/.cache/pnpm (verified: the v11 store dir lives there); mounting a
     // volume there lets installs survive container rebuilds.
     "source=t3code-pnpm-store,target=/home/vscode/.cache/pnpm,type=volume",
+    // Playwright's Chromium download, shared so a new checkout skips it.
+    "source=t3code-ms-playwright,target=/home/vscode/.cache/ms-playwright,type=volume",
     // Root node_modules holds the whole pnpm virtual store (.pnpm), so one
     // volume keeps the heavy tree off the slow macOS/Windows bind mount.
     // Scoped by devcontainerId so parallel checkouts do not share it.
