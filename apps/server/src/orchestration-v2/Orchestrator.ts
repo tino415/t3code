@@ -80,6 +80,8 @@ import { modelSwitchSince } from "./modelSwitch.ts";
 import { recordThreadOpen } from "@t3tools/shared/paletteSearch";
 import {
   backgroundWorkHoldsCompletion,
+  backgroundWorkLostBySettling,
+  countBackgroundTasks,
   derivePendingBackgroundWork,
   pendingBackgroundTurnItems,
 } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
@@ -3332,6 +3334,16 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     }
     if (command.type === "thread.settle") {
       const projection = yield* loadProjectionForCommand(command, ["runs", "runtimeRequests"]);
+      const shell = yield* projectionStore
+        .getThreadShell(command.threadId)
+        .pipe(
+          Effect.mapError(
+            (cause) => new OrchestratorProjectionError({ threadId: command.threadId, cause }),
+          ),
+        );
+      const pendingBackgroundTasks = backgroundWorkLostBySettling(
+        shell?.pendingBackgroundTasks ?? [],
+      );
       const queuedMessages = yield* projectionStore
         .getMessagesById(
           command.threadId,
@@ -3368,7 +3380,9 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
           ? "is still running. Stop it before settling."
           : queuedMessageExists
             ? "has a queued message. Send it or remove it from the queue before settling."
-            : null;
+            : command.stopBackgroundWork !== true && pendingBackgroundTasks.length > 0
+              ? `is waiting on ${countBackgroundTasks(pendingBackgroundTasks.length)}. Stop them or confirm settling.`
+              : null;
       if (blocker !== null) {
         return yield* new OrchestratorDispatchError({
           commandId: command.commandId,

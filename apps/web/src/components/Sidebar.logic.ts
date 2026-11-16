@@ -672,6 +672,7 @@ export interface ThreadStatusPill {
     | "Awaiting Input"
     | "Guest Request"
     | "Waiting"
+    | "Waiting on task"
     | "Plan Ready";
   colorClass: string;
   dotClass: string;
@@ -1163,12 +1164,11 @@ export function resolveThreadStatusPill(input: {
     };
   }
 
-  if (
-    (thread.runtime?.status === "running" && thread.blockedOnThreadWait === true) ||
-    backgroundWorkHoldsCompletion(thread.pendingBackgroundTasks ?? [])
-  ) {
+  const waitingOnThread =
+    thread.runtime?.status === "running" && thread.blockedOnThreadWait === true;
+  if (waitingOnThread || backgroundWorkHoldsCompletion(thread.pendingBackgroundTasks ?? [])) {
     return {
-      label: "Waiting",
+      label: waitingOnThread ? "Waiting" : "Waiting on task",
       colorClass: "text-sidebar-muted-foreground",
       dotClass: "bg-sidebar-muted-foreground",
       pulse: false,

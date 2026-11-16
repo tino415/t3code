@@ -443,7 +443,7 @@ describe("resolveThreadStatusPill", () => {
         },
       }),
     ).toMatchObject({
-      label: "Waiting",
+      label: "Waiting on task",
       colorClass: "text-sidebar-muted-foreground",
       dotClass: "bg-sidebar-muted-foreground",
       pulse: false,
@@ -921,7 +921,7 @@ describe("unseen completion with background work", () => {
       task: { kind: "command", awaited: true },
       status: "waiting",
       receded: true,
-      pill: "Waiting",
+      pill: "Waiting on task",
     },
   ] as const)("presents a completed thread with a $roster roster", (expected) => {
     const thread = presentThreadShell(localEnvironmentId, {

@@ -2964,6 +2964,8 @@ export const OrchestrationV2Command = Schema.Union([
     commandId: CommandId,
     threadId: ThreadId,
     settledAt: Schema.optional(Schema.DateTimeUtc),
+    /** Settling detaches the provider session, which ends its background tasks. */
+    stopBackgroundWork: Schema.optional(Schema.Boolean),
   }),
   /** Rejects changes since snapshotAt or any explicit settled override to preserve user actions. */
   Schema.Struct({

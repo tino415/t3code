@@ -16,6 +16,10 @@ import {
   ThreadId,
   sessionGrantsScope,
 } from "@t3tools/contracts";
+import {
+  backgroundWorkLostBySettling,
+  countBackgroundTasks,
+} from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
 import { resolveWorktreeCleanup } from "@t3tools/shared/projectSettings";
 import * as Cause from "effect/Cause";
 import * as Schema from "effect/Schema";
@@ -755,6 +759,22 @@ export function useThreadActions() {
       );
     }
     const resolved = resolveThreadTarget(target);
+    const pendingBackgroundTasks = backgroundWorkLostBySettling(
+      resolved?.thread.pendingBackgroundTasks ?? [],
+    );
+    const stopBackgroundWork = pendingBackgroundTasks.length > 0;
+    if (stopBackgroundWork) {
+      const localApi = readLocalApi();
+      const confirmationResult = await settlePromise(() =>
+        localApi
+          ? localApi.dialogs.confirm(
+              `Still waiting on ${countBackgroundTasks(pendingBackgroundTasks.length)}. Settle and stop them?`,
+            )
+          : Promise.resolve(false),
+      );
+      if (confirmationResult._tag === "Failure") return confirmationResult;
+      if (!confirmationResult.value) return AsyncResult.success(undefined);
+    }
     // oxlint-disable-next-line react/purity -- runs in an event handler (oxc#27309)
     const nowIso = new Date().toISOString();
     const wokeAt = resolved ? threadWokeAt(resolved.thread, { now: nowIso }) : null;
@@ -766,7 +786,7 @@ export function useThreadActions() {
     const action = ThreadUndo.begin("settle", scopedThreadKey(target));
     const result = await settleThreadMutation({
       environmentId: target.environmentId,
-      input: { threadId: target.threadId },
+      input: { threadId: target.threadId, ...(stopBackgroundWork ? { stopBackgroundWork } : {}) },
     });
     if (result._tag !== "Success") {
       action.finish();
