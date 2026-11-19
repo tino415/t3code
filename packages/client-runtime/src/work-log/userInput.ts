@@ -1,4 +1,7 @@
-import { type UserInputAttachmentAnswerPayload } from "@t3tools/contracts";
+import {
+  type OrchestrationV2UserInputQuestion,
+  type UserInputAttachmentAnswerPayload,
+} from "@t3tools/contracts";
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -6,11 +9,15 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-export function getQuestionAnswerText(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.map(getQuestionAnswerText).filter(Boolean).join(", ");
+function answerValues(value: unknown): string[] {
+  if (typeof value === "string") return value ? [value] : [];
+  if (Array.isArray(value)) return value.flatMap(answerValues);
   const nested = record(value);
-  return nested ? getQuestionAnswerText(nested.answers) : "";
+  return nested ? answerValues(nested.answers) : [];
+}
+
+export function getQuestionAnswerText(value: unknown): string {
+  return answerValues(value).join(", ");
 }
 
 export function getQuestionTextPreview(answer: UserInputAttachmentAnswerPayload): string {
@@ -78,4 +85,39 @@ export function answeredQuestionCaption(pairs: ReadonlyArray<AnsweredQuestionPai
   const [only] = pairs;
   if (pairs.length !== 1 || !only) return `You answered ${pairs.length} questions`;
   return only.question ? `You answered · ${only.question}` : "You answered";
+}
+
+export interface AnsweredQuestionDetail {
+  readonly questionId: string;
+  readonly header: string;
+  readonly question: string;
+  readonly options: ReadonlyArray<{
+    readonly label: string;
+    readonly description: string;
+    readonly picked: boolean;
+  }>;
+  readonly typedOwnAnswer: boolean;
+}
+
+export function answeredQuestionDetails(
+  questions: ReadonlyArray<OrchestrationV2UserInputQuestion>,
+  answer: UserInputAttachmentAnswerPayload,
+): AnsweredQuestionDetail[] {
+  return questions
+    .filter((question) => question.options.length > 0)
+    .map((question) => {
+      const given = answerValues(answer.answers[question.id]);
+      const options = question.options.map((option) => ({
+        label: option.label,
+        description: option.description,
+        picked: given.includes(option.value ?? option.label),
+      }));
+      return {
+        questionId: question.id,
+        header: question.header,
+        question: question.question,
+        options,
+        typedOwnAnswer: given.length > 0 && !options.some((option) => option.picked),
+      };
+    });
 }

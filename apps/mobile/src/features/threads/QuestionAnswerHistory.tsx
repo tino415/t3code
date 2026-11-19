@@ -1,12 +1,16 @@
 import type {
   EnvironmentId,
+  OrchestrationV2UserInputQuestion,
   UserInputAttachmentAnswerPayload,
   UserInputAttachments,
 } from "@t3tools/contracts";
 import { Image } from "expo-image";
+import { useState } from "react";
 import { Linking, Pressable, View, type ColorValue } from "react-native";
 import {
+  type AnsweredQuestionDetail,
   answeredQuestionCaption,
+  answeredQuestionDetails,
   answeredQuestionPairs,
   getQuestionAnswerText,
 } from "@t3tools/client-runtime/work-log/user-input";
@@ -87,19 +91,76 @@ export function QuestionAnswerHistory(props: {
   );
 }
 
+function AnsweredQuestionOptions(props: {
+  details: AnsweredQuestionDetail[];
+  maxWidth: number | `${number}%`;
+}) {
+  return (
+    <View
+      className="min-w-0 gap-3 rounded-[20px] border border-border px-3.5 py-2.5"
+      style={{ maxWidth: props.maxWidth }}
+    >
+      {props.details.map((detail) => (
+        <View key={detail.questionId} className="gap-1">
+          <Text className="text-xs text-foreground-muted">{detail.header}</Text>
+          <Text className="text-base text-foreground">{detail.question}</Text>
+          {detail.options.map((option) => (
+            <View key={option.label}>
+              <Text
+                className={
+                  option.picked
+                    ? "text-sm font-medium text-foreground"
+                    : "text-sm text-foreground-muted"
+                }
+              >
+                {option.picked ? "✓ " : ""}
+                {option.label}
+              </Text>
+              <Text className="text-xs text-foreground-muted">{option.description}</Text>
+            </View>
+          ))}
+          {detail.typedOwnAnswer ? (
+            <Text className="text-xs text-foreground-muted">
+              None picked: you typed your own answer.
+            </Text>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export function QuestionAnswerBubble(props: {
   environmentId: EnvironmentId;
   answer: UserInputAttachmentAnswerPayload;
+  questions: ReadonlyArray<OrchestrationV2UserInputQuestion>;
   bubbleColor: ColorValue;
   maxWidth: number | `${number}%`;
 }) {
+  const [optionsShown, setOptionsShown] = useState(false);
   const pairs = answeredQuestionPairs(props.answer);
+  const details = answeredQuestionDetails(props.questions, props.answer);
   const labelled = pairs.length > 1;
   return (
     <View className="items-end gap-1 py-1.5" style={{ maxWidth: "100%" }}>
       <Text className="text-xs text-foreground-muted" style={{ maxWidth: props.maxWidth }}>
         {answeredQuestionCaption(pairs)}
+        {details.length > 0 ? (
+          <>
+            {" · "}
+            <Text
+              accessibilityRole="button"
+              className="text-xs text-foreground-muted underline"
+              onPress={() => setOptionsShown((shown) => !shown)}
+            >
+              {optionsShown ? "Hide options ▾" : "Show options ▸"}
+            </Text>
+          </>
+        ) : null}
       </Text>
+      {optionsShown ? (
+        <AnsweredQuestionOptions details={details} maxWidth={props.maxWidth} />
+      ) : null}
       <View
         className="min-w-0 flex-row overflow-hidden rounded-[20px]"
         style={{ backgroundColor: props.bubbleColor, maxWidth: props.maxWidth }}

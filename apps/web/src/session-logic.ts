@@ -68,6 +68,7 @@ export type WorkLogToolLifecycleStatus =
 
 export interface WorkLogEntry {
   readonly questionAnswer?: import("@t3tools/contracts").UserInputAttachmentAnswerPayload;
+  readonly questions?: ReadonlyArray<import("@t3tools/contracts").OrchestrationV2UserInputQuestion>;
   readonly id: string;
   readonly createdAt: string;
   readonly runId?: RunId | null;
@@ -536,7 +537,9 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
       return {
         ...common,
         label: title ?? (item.questionAnswer ? "Answered questions" : "Input requested"),
-        ...(item.questionAnswer ? { questionAnswer: item.questionAnswer } : {}),
+        ...(item.questionAnswer
+          ? { questionAnswer: item.questionAnswer, questions: item.questions }
+          : {}),
         toolData: item,
       };
     default:

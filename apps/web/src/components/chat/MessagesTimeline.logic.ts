@@ -2571,7 +2571,7 @@ export function sameRowsInput(
 
 export function answeredQuestionOf(entries: ReadonlyArray<WorkLogEntry>) {
   const [entry] = entries;
-  return entries.length === 1 && entry && isAnsweredQuestion(entry)
-    ? (entry.questionAnswer ?? null)
+  return entries.length === 1 && entry && entry.questionAnswer && isAnsweredQuestion(entry)
+    ? { answer: entry.questionAnswer, questions: entry.questions ?? [] }
     : null;
 }
