@@ -81,6 +81,7 @@ export function contextCompactionLabel(item: CompactionLabelItem): string {
 
 export interface WorkLogPresentationEntry {
   readonly questionAnswer?: import("@t3tools/contracts").UserInputAttachmentAnswerPayload;
+  readonly questions?: ReadonlyArray<import("@t3tools/contracts").OrchestrationV2UserInputQuestion>;
   readonly id: string;
   readonly createdAt: string;
   readonly label: string;

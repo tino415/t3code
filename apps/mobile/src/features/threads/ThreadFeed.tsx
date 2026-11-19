@@ -1851,6 +1851,7 @@ function renderFeedEntry(
               key={activity.id}
               environmentId={props.environmentId}
               answer={activity.workEntry.questionAnswer}
+              questions={activity.workEntry.questions ?? []}
               bubbleColor={userBubbleColor}
               maxWidth={props.duoColumns ? "85%" : props.userBubbleMaxWidth}
             />

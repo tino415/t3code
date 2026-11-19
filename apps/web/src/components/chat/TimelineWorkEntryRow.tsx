@@ -1,8 +1,10 @@
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogDetails, WorkLogRow } from "./WorkLog";
 import {
+  type AnsweredQuestionDetail,
   getQuestionAnswerPreview,
   answeredQuestionCaption,
+  answeredQuestionDetails,
   answeredQuestionPairs,
   getQuestionAnswerText,
   getQuestionTextPreview,
@@ -11,6 +13,7 @@ import {
 import {
   ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE,
   type EnvironmentId,
+  type OrchestrationV2UserInputQuestion,
   type UserInputAttachmentAnswerPayload,
   type UserInputAttachments,
   ThreadId,
@@ -647,13 +650,57 @@ function QuestionAnswerHistory({ answer }: { answer: UserInputAttachmentAnswerPa
   );
 }
 
-export function QuestionAnswerBubble({ answer }: { answer: UserInputAttachmentAnswerPayload }) {
+function AnsweredQuestionOptions({ details }: { details: AnsweredQuestionDetail[] }) {
+  return (
+    <div className="min-w-0 max-w-[80%] space-y-3 rounded-2xl border border-border/60 px-4 py-2.5 text-sm">
+      {details.map((detail) => (
+        <div key={detail.questionId} className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">{detail.header}</p>
+          <p className="whitespace-pre-wrap">{detail.question}</p>
+          <ul className="space-y-1">
+            {detail.options.map((option) => (
+              <li key={option.label} className={cn(!option.picked && "text-muted-foreground")}>
+                <span className="font-medium">
+                  {option.picked ? "✓ " : ""}
+                  {option.label}
+                </span>
+                <span className="block whitespace-pre-wrap text-xs">{option.description}</span>
+              </li>
+            ))}
+          </ul>
+          {detail.typedOwnAnswer ? (
+            <p className="text-xs text-muted-foreground">None picked: you typed your own answer.</p>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function QuestionAnswerBubble({
+  answer,
+  questions,
+}: {
+  answer: UserInputAttachmentAnswerPayload;
+  questions: ReadonlyArray<OrchestrationV2UserInputQuestion>;
+}) {
+  const [optionsShown, setOptionsShown] = useState(false);
   const pairs = answeredQuestionPairs(answer);
+  const details = answeredQuestionDetails(questions, answer);
   return (
     <div className="flex flex-col items-end gap-1">
       <p className="max-w-[80%] whitespace-pre-wrap text-xs text-muted-foreground">
         {answeredQuestionCaption(pairs)}
+        {details.length > 0 ? (
+          <>
+            {" · "}
+            <InlineButton tone="muted" onClick={() => setOptionsShown((shown) => !shown)}>
+              {optionsShown ? "Hide options ▾" : "Show options ▸"}
+            </InlineButton>
+          </>
+        ) : null}
       </p>
+      {optionsShown ? <AnsweredQuestionOptions details={details} /> : null}
       <div className="min-w-0 max-w-[80%] space-y-2 rounded-2xl border-s-2 border-primary bg-message px-4 py-2.5 text-sm text-message-foreground">
         {pairs.map((pair, index) => (
           <div

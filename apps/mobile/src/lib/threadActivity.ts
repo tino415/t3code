@@ -723,7 +723,7 @@ function toWorkLogEntry(
     toolLifecycleStatus: itemLifecycleStatus(item),
     structuredPayload: item,
     ...(item.type === "user_input_request" && item.questionAnswer
-      ? { questionAnswer: item.questionAnswer }
+      ? { questionAnswer: item.questionAnswer, questions: item.questions }
       : {}),
   } as const;
 

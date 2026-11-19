@@ -1,6 +1,11 @@
 import { RuntimeRequestId } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
-import { answeredQuestionCaption, answeredQuestionPairs, isAnsweredQuestion } from "./userInput.ts";
+import {
+  answeredQuestionCaption,
+  answeredQuestionDetails,
+  answeredQuestionPairs,
+  isAnsweredQuestion,
+} from "./userInput.ts";
 
 const requestId = RuntimeRequestId.make("question");
 const file = {
@@ -64,5 +69,35 @@ describe("answered questions", () => {
       attachmentsByQuestionId: { doc: [file] },
     });
     expect(pairs).toMatchObject([{ answerText: "", attachments: [{ name: "notes.txt" }] }]);
+  });
+
+  it("marks the picked options of each question", () => {
+    const options = [
+      { label: "Postgres", description: "Relational", value: "pg" },
+      { label: "SQLite", description: "Embedded" },
+      { label: "Redis", description: "In memory" },
+    ];
+    const questions = [
+      { id: "store", header: "Store", question: "Which store?", options },
+      { id: "extras", header: "Extras", question: "Which extras?", options, multiSelect: true },
+      { id: "other", header: "Other", question: "Anything else?", options },
+      { id: "free", header: "Free", question: "Notes?", options: [] },
+    ];
+    const details = answeredQuestionDetails(questions, {
+      requestId,
+      answers: { store: "pg", extras: ["SQLite", "Redis"], other: "Mongo", free: "text" },
+      attachmentsByQuestionId: {},
+    });
+    expect(
+      details.map((detail) => [
+        detail.questionId,
+        detail.options.filter((option) => option.picked).map((option) => option.label),
+        detail.typedOwnAnswer,
+      ]),
+    ).toEqual([
+      ["store", ["Postgres"], false],
+      ["extras", ["SQLite", "Redis"], false],
+      ["other", [], true],
+    ]);
   });
 });

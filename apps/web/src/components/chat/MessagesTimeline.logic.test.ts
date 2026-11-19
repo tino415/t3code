@@ -4379,7 +4379,12 @@ describe("answeredQuestionOf", () => {
 
   it("returns the answer only for a single answered question", () => {
     const answered = entry({ a: "Blue" });
-    expect(answeredQuestionOf([answered])).toBe(answered.questionAnswer);
+    expect(answeredQuestionOf([answered])).toEqual({
+      answer: answered.questionAnswer,
+      questions: [],
+    });
+    const questions = [{ id: "a", header: "Color", question: "Which?", options: [] }];
+    expect(answeredQuestionOf([{ ...answered, questions }])?.questions).toBe(questions);
     expect(answeredQuestionOf([entry({})])).toBeNull();
     expect(answeredQuestionOf([answered, entry({ a: "Red" })])).toBeNull();
     expect(answeredQuestionOf([])).toBeNull();
