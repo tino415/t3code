@@ -20,13 +20,6 @@ export function getQuestionAnswerText(value: unknown): string {
   return answerValues(value).join(", ");
 }
 
-export function getQuestionTextPreview(answer: UserInputAttachmentAnswerPayload): string {
-  return Object.values(answer.questionTextById ?? {})
-    .map((text) => text.replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .join(" · ");
-}
-
 export function getQuestionAnswerPreview(answer: UserInputAttachmentAnswerPayload): string {
   const answers = Object.values(answer.answers).map(getQuestionAnswerText).filter(Boolean);
   const attachments = Object.values(answer.attachmentsByQuestionId)

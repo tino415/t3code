@@ -7,9 +7,11 @@ import {
 import {
   type OrchestrationV2UserInputQuestion,
   type UserInputAttachmentAnswerPayload,
+  type UserInputAttachments,
 } from "@t3tools/contracts";
 import { use } from "react";
 import { cn } from "~/lib/utils";
+import { useAssetUrls } from "../../assets/assetUrls";
 import { type WorkLogEntry } from "../../session-logic";
 import ChatMarkdown from "../ChatMarkdown";
 import { Badge } from "../ui/badge";
@@ -17,32 +19,44 @@ import { CheckboxMark } from "../ui/checkbox";
 import { OptionRadio } from "./ComposerPendingUserInputPanel";
 import { TimelineRowCtx } from "./timelineRowContext";
 import { MessageAuthorHeading } from "./TimelineRowParts";
-import { QuestionAnswerAttachments } from "./TimelineWorkEntryRow";
 
 export function TimelineQuestionRow({ entry }: { entry: WorkLogEntry }) {
+  const questions = questionsOf(entry);
   return (
     <div className="space-y-4">
-      <QuestionBubble entry={entry} />
+      <QuestionBubble entry={entry} questions={questions} />
       {entry.questionAnswer && isAnsweredQuestion(entry) ? (
-        <QuestionAnswerBubble answer={entry.questionAnswer} questions={entry.questions ?? []} />
+        <QuestionAnswerBubble answer={entry.questionAnswer} questions={questions} />
       ) : null}
     </div>
   );
 }
 
-function QuestionBubble({ entry }: { entry: WorkLogEntry }) {
-  const questions = entry.questions ?? [];
-  if (questions.length === 0) return null;
+function questionsOf(entry: WorkLogEntry): ReadonlyArray<OrchestrationV2UserInputQuestion> {
+  if (entry.questions?.length) return entry.questions;
+  return Object.entries(entry.questionAnswer?.questionTextById ?? {}).map(([id, question]) => ({
+    id,
+    header: "",
+    question,
+    options: [],
+  }));
+}
+
+function QuestionBubble({
+  entry,
+  questions,
+}: {
+  entry: WorkLogEntry;
+  questions: ReadonlyArray<OrchestrationV2UserInputQuestion>;
+}) {
   const notAnswered = entry.toolLifecycleStatus !== "inProgress" && !isAnsweredQuestion(entry);
   return (
     <div className="relative min-w-0 rounded-2xl border border-border bg-card p-3">
       <MessageAuthorHeading>T3 Code</MessageAuthorHeading>
+      {questions.length === 0 ? <QuestionHeading first header="" /> : null}
       {questions.map((question, index) => (
         <div key={question.id} className={cn(index > 0 && "mt-2.5 border-t border-border pt-2.5")}>
-          <p className="mb-1 text-xs font-semibold text-muted-foreground">
-            {index === 0 ? "T3 Code asked · " : null}
-            <span className="font-medium">{question.header}</span>
-          </p>
+          <QuestionHeading first={index === 0} header={question.header} />
           <QuestionText question={question} />
           <QuestionOptions
             question={question}
@@ -61,16 +75,25 @@ function QuestionBubble({ entry }: { entry: WorkLogEntry }) {
   );
 }
 
+function QuestionHeading({ first, header }: { first: boolean; header: string }) {
+  if (!first && !header) return null;
+  return (
+    <p className="mb-1 text-xs font-semibold text-muted-foreground">
+      {first ? "T3 Code asked" : null}
+      {first && header ? " · " : null}
+      <span className="font-medium">{header}</span>
+    </p>
+  );
+}
+
 function QuestionText({ question }: { question: OrchestrationV2UserInputQuestion }) {
   const ctx = use(TimelineRowCtx);
   return (
-    <div data-thread-find-text="true">
-      <ChatMarkdown
-        text={question.question}
-        cwd={ctx.markdownCwd}
-        threadRef={ctx.threadRef ?? undefined}
-      />
-    </div>
+    <ChatMarkdown
+      text={question.question}
+      cwd={ctx.markdownCwd}
+      threadRef={ctx.threadRef ?? undefined}
+    />
   );
 }
 
@@ -104,7 +127,10 @@ function QuestionOptions({
               )}
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-sm font-medium">{option.label}</span>
+              <span className="text-sm font-medium">
+                {option.label}
+                {isPicked ? <span className="sr-only"> (picked)</span> : null}
+              </span>
               {option.description !== option.label ? (
                 <span className="text-2xs">{option.description}</span>
               ) : null}
@@ -145,6 +171,48 @@ function QuestionAnswerBubble({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function QuestionAnswerAttachments({
+  attachments,
+}: {
+  attachments: ReadonlyArray<UserInputAttachments[string][number]>;
+}) {
+  const { activeThreadEnvironmentId } = use(TimelineRowCtx);
+  const urls = useAssetUrls(
+    activeThreadEnvironmentId,
+    attachments.map((attachment) => ({
+      _tag: "attachment" as const,
+      attachmentId: attachment.id,
+    })),
+  );
+  if (attachments.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {attachments.map((attachment, index) => {
+        const url = urls[index];
+        return (
+          <a
+            key={attachment.id}
+            href={url ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm underline"
+          >
+            {attachment.type === "image" && url ? (
+              <img
+                src={url}
+                alt={attachment.name}
+                className="h-20 max-w-32 rounded object-contain"
+              />
+            ) : (
+              attachment.name
+            )}
+          </a>
+        );
+      })}
     </div>
   );
 }
