@@ -86,7 +86,7 @@ import {
   timelineTurnFoldRunIdsByEntryId,
   type MessagesTimelineRow,
   type TimelineLatestRun,
-  answeredQuestionOf,
+  questionOf,
 } from "./MessagesTimeline.logic";
 import { type ThreadFindMatch } from "./threadFind";
 import { useThreadFindNavigation } from "./useThreadFindNavigation";
@@ -110,7 +110,7 @@ import {
   type TimelineRow,
 } from "./timelineRowContext";
 import { TimelineRowTimestamp, ActivityShimmerOverlay } from "./TimelineRowParts";
-import { QuestionAnswerBubble } from "./TimelineWorkEntryRow";
+import { TimelineQuestionRow } from "./TimelineQuestionRow";
 import {
   WorkGroupSection,
   WorkingTimelineRow,
@@ -1417,17 +1417,18 @@ function keyExtractor(item: MessagesTimelineRow) {
 
 // LegendList averages by type; length buckets prevent inflated estimates and nested-update loops.
 function getItemType(item: MessagesTimelineRow) {
+  if (item.kind === "work" && questionOf(item.groupedEntries)) return "question";
   if (item.kind !== "message") return item.kind;
   const lengthBucket = Math.max(0, Math.floor(Math.log2(item.message.text.length / 1000)));
   return `message:${item.message.role}:${lengthBucket}`;
 }
 
 const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: TimelineRow }) {
-  const answeredQuestion = row.kind === "work" ? answeredQuestionOf(row.groupedEntries) : null;
+  const question = row.kind === "work" ? questionOf(row.groupedEntries) : null;
   const isExpandedToolGroup = row.kind === "work" && row.isExpandedToolGroup;
   const isSubagentGroup = row.kind === "event" && row.projectedItem.item.type === "subagent";
   const isWorkLogRow =
-    answeredQuestion === null &&
+    question === null &&
     (row.kind === "work" ||
       row.kind === "work-live" ||
       row.kind === "work-toggle" ||
@@ -1491,7 +1492,7 @@ const TimelineRowContent = memo(function TimelineRowContent({ row }: { row: Time
           {row.kind === "thinking" ? <ThinkingTimelineRow row={row} /> : null}
         </WorkLogBlock>
       ) : null}
-      {answeredQuestion ? <QuestionAnswerBubble {...answeredQuestion} /> : null}
+      {question ? <TimelineQuestionRow entry={question} /> : null}
       {row.kind === "turn-fold" ? <TurnFoldTimelineRow key={row.id} row={row} /> : null}
       {row.kind === "attempt-fold" ? <AttemptFoldTimelineRow row={row} /> : null}
       {row.kind === "context-compaction" ? <ContextCompactionTimelineRow row={row} /> : null}

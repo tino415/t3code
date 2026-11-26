@@ -32,7 +32,7 @@ import {
   resolveAssistantMessageCopyState,
   type MessagesTimelineRow,
   workEntryDisplayLabel,
-  answeredQuestionOf,
+  questionOf,
 } from "./MessagesTimeline.logic";
 
 describe("resolveAssistantMessageCopyState", () => {
@@ -166,7 +166,7 @@ describe("deriveMessagesTimelineRows", () => {
   });
 
   it.each(["waiting", "completed"] as const)(
-    "groups approval and user-input requests with commands without expanding them when %s",
+    "groups approval requests with commands without expanding them, and keeps user-input requests apart, when %s",
     (status) => {
       const fixture = makeStreamingTimelineFixture();
       const source = fixture.visibleTurnItems[0]!;
@@ -238,7 +238,11 @@ describe("deriveMessagesTimelineRows", () => {
       const expanded = expandedRows.find((row) => row.kind === "work" && row.isExpandedToolGroup);
       expect(
         expanded?.kind === "work" && expanded.groupedEntries.map((entry) => entry.itemType),
-      ).toEqual(["command_execution", "approval_request", "user_input_request"]);
+      ).toEqual(["command_execution", "approval_request"]);
+      expect(rows.at(-1)).toMatchObject({
+        kind: "work",
+        groupedEntries: [expect.objectContaining({ itemType: "user_input_request" })],
+      });
       expect(rows.some((row) => row.kind === "event")).toBe(false);
       expect(workRows[0]).not.toMatchObject({ expanded: true });
       expect(workRows[0]).not.toMatchObject({ isExpandedToolGroup: true });
@@ -1956,7 +1960,7 @@ describe("deriveMessagesTimelineRows", () => {
     ]);
   });
 
-  it("keeps answered questions in their own row outside tool groups and turn folds", () => {
+  it("keeps questions, answered or waiting, in their own row outside tool groups and turn folds", () => {
     const threadId = ThreadId.make("answered-question-thread");
     const runId = RunId.make("answered-question-run");
     const requestId = RuntimeRequestId.make("scope-question");
@@ -1983,7 +1987,7 @@ describe("deriveMessagesTimelineRows", () => {
       type: "command_execution" as const,
       input: `cat ${id}`,
     });
-    const items = (settled: boolean) =>
+    const items = (settled: boolean, answered: boolean) =>
       [
         {
           ...base("prompt", 0, 0),
@@ -1996,18 +2000,27 @@ describe("deriveMessagesTimelineRows", () => {
           creationSource: "web" as const,
         },
         command("before", 1, 1),
-        {
-          ...base("question", 2, 2),
-          type: "user_input_request" as const,
-          requestId,
-          questions: [],
-          questionAnswer: {
-            requestId,
-            questionTextById: { scope: "Which repository?" },
-            answers: { scope: "The private one" },
-            attachmentsByQuestionId: {},
-          },
-        },
+        answered
+          ? {
+              ...base("question", 2, 2),
+              type: "user_input_request" as const,
+              requestId,
+              questions: [],
+              questionAnswer: {
+                requestId,
+                questionTextById: { scope: "Which repository?" },
+                answers: { scope: "The private one" },
+                attachmentsByQuestionId: {},
+              },
+            }
+          : {
+              ...base("question", 2, 2),
+              status: "waiting" as const,
+              completedAt: null,
+              type: "user_input_request" as const,
+              requestId,
+              questions: [],
+            },
         command("after", 3, 3),
         settled
           ? {
@@ -2025,10 +2038,10 @@ describe("deriveMessagesTimelineRows", () => {
         sourceItemId: item.id,
         item,
       }));
-    const rows = (settled: boolean, expandedRunIds?: ReadonlySet<RunId>) =>
+    const rows = (settled: boolean, expandedRunIds?: ReadonlySet<RunId>, answered = true) =>
       deriveMessagesTimelineRows({
         timelineEntries: deriveTimelineEntriesFromVisibleTurnItems({
-          visibleTurnItems: items(settled),
+          visibleTurnItems: items(settled, answered),
           optimisticMessages: [],
         }),
         latestRun: {
@@ -2065,6 +2078,19 @@ describe("deriveMessagesTimelineRows", () => {
       "assistant:answer",
     ]);
     expect(shape(rows(false))).toEqual([
+      "user:prompt",
+      "working",
+      "work:before",
+      "work:question",
+      "work-live:after + running",
+    ]);
+    expect(shape(rows(true, undefined, false))).toEqual([
+      "user:prompt",
+      "fold",
+      "work:question",
+      "assistant:answer",
+    ]);
+    expect(shape(rows(false, undefined, false))).toEqual([
       "user:prompt",
       "working",
       "work:before",
@@ -4366,27 +4392,15 @@ describe("shouldCollapseUserMessage", () => {
   });
 });
 
-describe("answeredQuestionOf", () => {
-  const entry = (answers: Record<string, string>) =>
-    ({
-      id: "question",
-      questionAnswer: {
-        requestId: RuntimeRequestId.make("question"),
-        answers,
-        attachmentsByQuestionId: {},
-      },
-    }) as unknown as Parameters<typeof answeredQuestionOf>[0][number];
+describe("questionOf", () => {
+  const entry = (itemType: string) =>
+    ({ id: itemType, itemType }) as unknown as Parameters<typeof questionOf>[0][number];
 
-  it("returns the answer only for a single answered question", () => {
-    const answered = entry({ a: "Blue" });
-    expect(answeredQuestionOf([answered])).toEqual({
-      answer: answered.questionAnswer,
-      questions: [],
-    });
-    const questions = [{ id: "a", header: "Color", question: "Which?", options: [] }];
-    expect(answeredQuestionOf([{ ...answered, questions }])?.questions).toBe(questions);
-    expect(answeredQuestionOf([entry({})])).toBeNull();
-    expect(answeredQuestionOf([answered, entry({ a: "Red" })])).toBeNull();
-    expect(answeredQuestionOf([])).toBeNull();
+  it("returns the entry only for a single question", () => {
+    const question = entry("user_input_request");
+    expect(questionOf([question])).toBe(question);
+    expect(questionOf([entry("command_execution")])).toBeNull();
+    expect(questionOf([question, entry("command_execution")])).toBeNull();
+    expect(questionOf([])).toBeNull();
   });
 });

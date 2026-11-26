@@ -335,7 +335,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
 
 // Drawn with ui/radio-group's look instead of using its Radio: Radio only checks inside a
 // RadioGroup, whose arrow keys select options and would trip the single-select auto-advance.
-function OptionRadio({ checked }: { checked: boolean }) {
+export function OptionRadio({ checked }: { checked: boolean }) {
   return (
     <span
       aria-hidden

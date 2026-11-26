@@ -1,7 +1,6 @@
 import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
 import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
-import { isAnsweredQuestion } from "@t3tools/client-runtime/work-log/user-input";
 import * as DateTime from "effect/DateTime";
 import * as Equal from "effect/Equal";
 import {
@@ -1142,7 +1141,7 @@ function deriveTurnFolds(input: {
         continue;
       }
       if (entry.kind === "work" && entry.entry.itemType === "notification") continue;
-      if (entry.kind === "work" && entry.entry.questionAnswer !== undefined) continue;
+      if (entry.kind === "work" && isQuestion(entry.entry)) continue;
       hiddenEntryIds.add(entry.id);
     }
     if (hiddenEntryIds.size === 0) {
@@ -1514,7 +1513,7 @@ export function deriveMessagesTimelineRows(input: {
         entry.entry.sourceActivityKind === "runtime.error" ||
         entry.entry.itemType === "system_notice" ||
         entry.entry.itemType === "notification" ||
-        entry.entry.questionAnswer !== undefined ||
+        isQuestion(entry.entry) ||
         isPendingApproval(entry.entry) ||
         !runIdIsActiveResponse(entry.entry.runId) ||
         entry.entry.sourceActivityKind === "context-compaction" ||
@@ -1806,7 +1805,7 @@ export function deriveMessagesTimelineRows(input: {
         timelineEntry.entry.sourceActivityKind === "runtime.error" ||
         timelineEntry.entry.itemType === "system_notice" ||
         timelineEntry.entry.itemType === "notification" ||
-        timelineEntry.entry.questionAnswer !== undefined
+        isQuestion(timelineEntry.entry)
       ) {
         nextRows.push({
           kind: "work",
@@ -1831,7 +1830,7 @@ export function deriveMessagesTimelineRows(input: {
           nextEntry.entry.sourceActivityKind === "runtime.error" ||
           nextEntry.entry.itemType === "system_notice" ||
           nextEntry.entry.itemType === "notification" ||
-          nextEntry.entry.questionAnswer !== undefined ||
+          isQuestion(nextEntry.entry) ||
           isPendingApproval(nextEntry.entry) ||
           activeWorkEntryIds.has(nextEntry.id) ||
           collapsedEntryIds.has(nextEntry.id) ||
@@ -2569,9 +2568,11 @@ export function sameRowsInput(
   return Object.keys(left).length === Object.keys(right).length;
 }
 
-export function answeredQuestionOf(entries: ReadonlyArray<WorkLogEntry>) {
+function isQuestion(entry: WorkLogEntry) {
+  return entry.itemType === "user_input_request";
+}
+
+export function questionOf(entries: ReadonlyArray<WorkLogEntry>) {
   const [entry] = entries;
-  return entries.length === 1 && entry && entry.questionAnswer && isAnsweredQuestion(entry)
-    ? { answer: entry.questionAnswer, questions: entry.questions ?? [] }
-    : null;
+  return entries.length === 1 && entry && isQuestion(entry) ? entry : null;
 }
