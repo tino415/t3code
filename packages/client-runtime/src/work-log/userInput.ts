@@ -20,13 +20,6 @@ export function getQuestionAnswerText(value: unknown): string {
   return answerValues(value).join(", ");
 }
 
-export function getQuestionTextPreview(answer: UserInputAttachmentAnswerPayload): string {
-  return Object.values(answer.questionTextById ?? {})
-    .map((text) => text.replace(/\s+/g, " ").trim())
-    .filter(Boolean)
-    .join(" · ");
-}
-
 export function getQuestionAnswerPreview(answer: UserInputAttachmentAnswerPayload): string {
   const answers = Object.values(answer.answers).map(getQuestionAnswerText).filter(Boolean);
   const attachments = Object.values(answer.attachmentsByQuestionId)
@@ -99,6 +92,18 @@ export interface AnsweredQuestionDetail {
   readonly typedOwnAnswer: boolean;
 }
 
+export function questionOptionValue(option: OrchestrationV2UserInputQuestion["options"][number]) {
+  return option.value ?? option.label;
+}
+
+export function pickedOptionValues(
+  question: OrchestrationV2UserInputQuestion,
+  answer: UserInputAttachmentAnswerPayload | undefined,
+): string[] {
+  const given = answerValues(answer?.answers[question.id]);
+  return question.options.map(questionOptionValue).filter((value) => given.includes(value));
+}
+
 export function answeredQuestionDetails(
   questions: ReadonlyArray<OrchestrationV2UserInputQuestion>,
   answer: UserInputAttachmentAnswerPayload,
@@ -106,18 +111,18 @@ export function answeredQuestionDetails(
   return questions
     .filter((question) => question.options.length > 0)
     .map((question) => {
-      const given = answerValues(answer.answers[question.id]);
+      const picked = pickedOptionValues(question, answer);
       const options = question.options.map((option) => ({
         label: option.label,
         description: option.description,
-        picked: given.includes(option.value ?? option.label),
+        picked: picked.includes(questionOptionValue(option)),
       }));
       return {
         questionId: question.id,
         header: question.header,
         question: question.question,
         options,
-        typedOwnAnswer: given.length > 0 && !options.some((option) => option.picked),
+        typedOwnAnswer: picked.length === 0 && answerValues(answer.answers[question.id]).length > 0,
       };
     });
 }

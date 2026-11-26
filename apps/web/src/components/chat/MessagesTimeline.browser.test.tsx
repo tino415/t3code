@@ -333,6 +333,40 @@ describe("MessagesTimeline work rows", () => {
       }
     },
   );
+
+  it("shows an answered question with live links and its picked option marked", async () => {
+    setup();
+    await using screen = await renderTimeline([
+      work("question", {
+        label: "Answered questions",
+        tone: "info",
+        itemType: "user_input_request",
+        toolLifecycleStatus: "completed",
+        questions: [
+          {
+            id: "plan",
+            header: "Plan",
+            question: "The plan is at [the review page](https://example.com/plan). Approve it?",
+            options: [
+              { label: "Approve", description: "The card moves to Next" },
+              { label: "Drop", description: "The card closes" },
+            ],
+          },
+        ],
+        questionAnswer: {
+          requestId: RuntimeRequestId.make("question"),
+          answers: { plan: "Approve" },
+          attachmentsByQuestionId: {},
+        },
+      }),
+    ]);
+    await expect
+      .element(screen.getByRole("link", { name: "the review page" }))
+      .toHaveAttribute("href", "https://example.com/plan");
+    const option = (label: string) => screen.getByRole("listitem").filter({ hasText: label });
+    await expect.element(option("Approve")).toHaveAttribute("data-picked", "true");
+    await expect.element(option("Drop")).not.toHaveAttribute("data-picked");
+  });
 });
 
 describe("MessagesTimeline messages", () => {

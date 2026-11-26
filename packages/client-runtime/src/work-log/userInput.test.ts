@@ -5,6 +5,7 @@ import {
   answeredQuestionDetails,
   answeredQuestionPairs,
   isAnsweredQuestion,
+  pickedOptionValues,
 } from "./userInput.ts";
 
 const requestId = RuntimeRequestId.make("question");
@@ -99,5 +100,23 @@ describe("answered questions", () => {
       ["extras", ["SQLite", "Redis"], false],
       ["other", [], true],
     ]);
+  });
+
+  it("finds the option values an answer picked", () => {
+    const options = [
+      { label: "Postgres", description: "Relational", value: "pg" },
+      { label: "SQLite", description: "Embedded" },
+    ];
+    const single = { id: "store", header: "Store", question: "Which store?", options };
+    const multi = { ...single, id: "extras", multiSelect: true };
+    const answer = {
+      requestId,
+      answers: { store: "pg", extras: ["SQLite", "pg"], free: "Mongo" },
+      attachmentsByQuestionId: {},
+    };
+    expect(pickedOptionValues(single, answer)).toEqual(["pg"]);
+    expect(pickedOptionValues(multi, answer)).toEqual(["pg", "SQLite"]);
+    expect(pickedOptionValues({ ...single, id: "free" }, answer)).toEqual([]);
+    expect(pickedOptionValues(single, undefined)).toEqual([]);
   });
 });

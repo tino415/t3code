@@ -537,9 +537,8 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
       return {
         ...common,
         label: title ?? (item.questionAnswer ? "Answered questions" : "Input requested"),
-        ...(item.questionAnswer
-          ? { questionAnswer: item.questionAnswer, questions: item.questions }
-          : {}),
+        questions: item.questions,
+        ...(item.questionAnswer ? { questionAnswer: item.questionAnswer } : {}),
         toolData: item,
       };
     default:

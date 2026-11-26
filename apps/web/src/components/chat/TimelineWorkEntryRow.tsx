@@ -1,21 +1,8 @@
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogDetails, WorkLogRow } from "./WorkLog";
 import {
-  type AnsweredQuestionDetail,
-  getQuestionAnswerPreview,
-  answeredQuestionCaption,
-  answeredQuestionDetails,
-  answeredQuestionPairs,
-  getQuestionAnswerText,
-  getQuestionTextPreview,
-  hasQuestionAnswer,
-} from "@t3tools/client-runtime/work-log/user-input";
-import {
   ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE,
   type EnvironmentId,
-  type OrchestrationV2UserInputQuestion,
-  type UserInputAttachmentAnswerPayload,
-  type UserInputAttachments,
   ThreadId,
 } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
@@ -41,7 +28,6 @@ import ChatMarkdown from "../ChatMarkdown";
 import { ChatMarkdownAssetImage } from "./ChatMarkdownMedia";
 import { ChevronRightIcon, CircleAlertIcon, XIcon, RotateCcwIcon } from "lucide-react";
 import { Button, InlineButton } from "../ui/button";
-import { useAssetUrls } from "../../assets/assetUrls";
 import { useThreadShell } from "../../state/entities";
 import {
   threadReadLabelPrefix,
@@ -292,19 +278,12 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       ? undefined
       : (workEntry.toolIcon ?? workEntry.toolSource?.icon);
   const isReasoning = workEntry.itemType === "reasoning";
-  const questionHeading = workEntry.questionAnswer
-    ? getQuestionTextPreview(workEntry.questionAnswer)
-    : "";
   const previewText =
     isReasoning && expanded
       ? workEntry.toolLifecycleStatus === "inProgress"
         ? "Thinking"
         : "Thought"
-      : questionHeading || (displayLabel ?? workEntryDisplayLabel(workEntry, workspaceRoot));
-  const answerPreview =
-    workEntry.questionAnswer && hasQuestionAnswer(workEntry.questionAnswer)
-      ? getQuestionAnswerPreview(workEntry.questionAnswer)
-      : null;
+      : (displayLabel ?? workEntryDisplayLabel(workEntry, workspaceRoot));
   const viewedImagePath = workEntryViewedImagePath(workEntry);
   const payload = workEntry.structuredPayload;
   const skill =
@@ -351,16 +330,12 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     turnItemNeedsDetailFetch(workEntry.projectedItem.item);
   const canExpandProjectedItem =
     plainOutput !== undefined
-      ? Boolean(plainOutput || viewedImage || workEntry.questionAnswer || plainOutputFetches)
+      ? Boolean(plainOutput || viewedImage || plainOutputFetches)
       : workEntry.projectedItem === undefined
         ? canExpand
         : isReasoning
           ? Boolean(workEntry.detail?.trim())
-          : Boolean(
-              viewedImage ||
-              workEntry.questionAnswer ||
-              turnItemHasDetail(workEntry.projectedItem.item),
-            );
+          : Boolean(viewedImage || turnItemHasDetail(workEntry.projectedItem.item));
   const iconWrapperClass = cn(
     "flex size-4 items-center justify-center",
     showWarningIndicator
@@ -381,9 +356,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
         ? "text-secondary-label"
         : "text-foreground/80";
   const threadLabel = isReasoning ? null : threadReadLabel(previewText, threadTarget);
-  const accessiblePreview = [threadLabel?.text ?? previewText, answerPreview]
-    .filter(Boolean)
-    .join(": ");
+  const accessiblePreview = threadLabel?.text ?? previewText;
   const accessibleDisplayText = showFailedIndicator
     ? `${accessiblePreview}, tool call failed`
     : accessiblePreview;
@@ -425,9 +398,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       label={
         <div className="min-w-0 flex-1 overflow-hidden">
           <p className="flex min-w-0 w-full items-baseline gap-1.5 text-sm leading-relaxed">
-            <span
-              className={cn(answerPreview ? "min-w-0" : "min-w-0 flex-1", "truncate", headingClass)}
-            >
+            <span className={cn("min-w-0 flex-1 truncate", headingClass)}>
               {isReasoning && !expanded ? (
                 <ChatMarkdown
                   inline
@@ -450,20 +421,6 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
                 previewText
               )}
             </span>
-            {answerPreview ? (
-              <span
-                className={cn(
-                  "min-w-0 truncate",
-                  !expanded &&
-                    workEntry.questionAnswer &&
-                    hasQuestionAnswer(workEntry.questionAnswer)
-                    ? "text-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                {answerPreview}
-              </span>
-            ) : null}
           </p>
         </div>
       }
@@ -531,13 +488,9 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
           />
         </WorkLogDetails>
       ) : null}
-      {expanded && workEntry.questionAnswer ? (
-        <QuestionAnswerHistory answer={workEntry.questionAnswer} />
-      ) : null}
       {expanded && isReasoning ? <ReasoningTraceContent entries={[workEntry]} /> : null}
       {expanded &&
       !isReasoning &&
-      !workEntry.questionAnswer &&
       canExpandProjectedItem &&
       (expandedBody ||
         plainOutputFetches ||
@@ -571,150 +524,5 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
         </WorkLogDetails>
       ) : null}
     </WorkLogRow>
-  );
-}
-
-function questionIdsOf(answer: UserInputAttachmentAnswerPayload): string[] {
-  return [
-    ...new Set([
-      ...Object.keys(answer.questionTextById ?? {}),
-      ...Object.keys(answer.answers),
-      ...Object.keys(answer.attachmentsByQuestionId),
-    ]),
-  ];
-}
-
-function QuestionAnswerAttachments({
-  attachments,
-}: {
-  attachments: ReadonlyArray<UserInputAttachments[string][number]>;
-}) {
-  const { activeThreadEnvironmentId } = use(TimelineRowCtx);
-  const urls = useAssetUrls(
-    activeThreadEnvironmentId,
-    attachments.map((attachment) => ({
-      _tag: "attachment" as const,
-      attachmentId: attachment.id,
-    })),
-  );
-  if (attachments.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {attachments.map((attachment, index) => {
-        const url = urls[index];
-        return (
-          <a
-            key={attachment.id}
-            href={url ?? undefined}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm underline"
-          >
-            {attachment.type === "image" && url ? (
-              <img
-                src={url}
-                alt={attachment.name}
-                className="h-20 max-w-32 rounded object-contain"
-              />
-            ) : (
-              attachment.name
-            )}
-          </a>
-        );
-      })}
-    </div>
-  );
-}
-
-function QuestionAnswerHistory({ answer }: { answer: UserInputAttachmentAnswerPayload }) {
-  return (
-    <div className="ms-7 mt-2 space-y-2" onClick={stopRowToggle}>
-      {questionIdsOf(answer).map((questionId) => (
-        <div key={questionId} className="space-y-1">
-          {answer.questionTextById?.[questionId] ? (
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-              {answer.questionTextById[questionId]}
-            </p>
-          ) : null}
-          {getQuestionAnswerText(answer.answers[questionId]) ? (
-            <p className="ms-3 whitespace-pre-wrap text-sm text-muted-foreground">
-              {getQuestionAnswerText(answer.answers[questionId])}
-            </p>
-          ) : null}
-          <QuestionAnswerAttachments
-            attachments={answer.attachmentsByQuestionId[questionId] ?? []}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AnsweredQuestionOptions({ details }: { details: AnsweredQuestionDetail[] }) {
-  return (
-    <div className="min-w-0 max-w-[80%] space-y-3 rounded-2xl border border-border/60 px-4 py-2.5 text-sm">
-      {details.map((detail) => (
-        <div key={detail.questionId} className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">{detail.header}</p>
-          <p className="whitespace-pre-wrap">{detail.question}</p>
-          <ul className="space-y-1">
-            {detail.options.map((option) => (
-              <li key={option.label} className={cn(!option.picked && "text-muted-foreground")}>
-                <span className="font-medium">
-                  {option.picked ? "✓ " : ""}
-                  {option.label}
-                </span>
-                <span className="block whitespace-pre-wrap text-xs">{option.description}</span>
-              </li>
-            ))}
-          </ul>
-          {detail.typedOwnAnswer ? (
-            <p className="text-xs text-muted-foreground">None picked: you typed your own answer.</p>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function QuestionAnswerBubble({
-  answer,
-  questions,
-}: {
-  answer: UserInputAttachmentAnswerPayload;
-  questions: ReadonlyArray<OrchestrationV2UserInputQuestion>;
-}) {
-  const [optionsShown, setOptionsShown] = useState(false);
-  const pairs = answeredQuestionPairs(answer);
-  const details = answeredQuestionDetails(questions, answer);
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <p className="max-w-[80%] whitespace-pre-wrap text-xs text-muted-foreground">
-        {answeredQuestionCaption(pairs)}
-        {details.length > 0 ? (
-          <>
-            {" · "}
-            <InlineButton tone="muted" onClick={() => setOptionsShown((shown) => !shown)}>
-              {optionsShown ? "Hide options ▾" : "Show options ▸"}
-            </InlineButton>
-          </>
-        ) : null}
-      </p>
-      {optionsShown ? <AnsweredQuestionOptions details={details} /> : null}
-      <div className="min-w-0 max-w-[80%] space-y-2 rounded-2xl border-s-2 border-primary bg-message px-4 py-2.5 text-sm text-message-foreground">
-        {pairs.map((pair, index) => (
-          <div
-            key={pair.questionId}
-            className={cn("space-y-1", index > 0 && "border-t border-border/60 pt-2")}
-          >
-            {pairs.length > 1 && pair.question ? (
-              <p className="whitespace-pre-wrap text-xs text-muted-foreground">{pair.question}</p>
-            ) : null}
-            {pair.answerText ? <p className="whitespace-pre-wrap">{pair.answerText}</p> : null}
-            <QuestionAnswerAttachments attachments={pair.attachments} />
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
